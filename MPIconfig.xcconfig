@@ -1,0 +1,9 @@
+//
+//  MPIconfig.xcconfig
+//  MRIDSS
+//
+//  Created by Jonathan Squire on 5/7/14.
+//  Copyright (c) 2014 Jonathan Squire. All rights reserved.
+//
+
+ CC = /usr/local/bin/mpic++
