@@ -10,12 +10,13 @@
 #define MRIDSS_Model_h
 
 #include "../General_Definitions.h"
+#include "../Auxiliary/MPIdata.h"
 
 // Abstract model class - container for equations of motion for MRIDSS
 // Ckl data is a pointer array (size dimxy) of Eigen matrices (size dimz^2)
 // Mean field data is a (num_MF) pointer array of Eigen matrices of size NZ
 
-
+class TimeVariables; // Not ideal here, but sort of shot myseld in the foot
 
 class Model {
 public:
@@ -24,7 +25,6 @@ public:
         L_(L) {
         // These dimensions do not depend on model (i.e., number of variables, MFs etc.)
         NZ_ = NZ;
-//        L_ = L; // NOTE: L_ is set to be the pointer to L, cannot be modified
         Nxy_[0] = NXY[0]; // Nyquist (and zero) frequncy included in NXY[0]
         Nxy_[1]= NXY[1]/2; // ONLY USE HALF OF THE TRANSFORM FOR THE Y DIMENSION DUE TO FULL Ckl BEING REAL!
         nxy_full_= (Nxy_[0]-1)*Nxy_[1] ;// Leave out Nyquist frequency in kx
@@ -37,7 +37,7 @@ public:
     //  as to allow for semi-implicit integrators.
     // The linear operators are evaluated at t + dt_lin
     virtual void rhs(double t, double dt_lin,
-                    const dcmplxVec *MFin, const dcmplxMat *Cin,
+                    dcmplxVec *MFin, dcmplxMat *Cin,
                     dcmplxVec *MFout, dcmplxMat *Cout,
                     doubVec * linop_Ckl) = 0;
     
@@ -45,13 +45,13 @@ public:
     virtual void linearOPs_Init(double t0, doubVec * linop_MF, doubVec * linop_Ckl_old) = 0;
     
     // number of states (size of x)
-    virtual int Cdimxy() const = 0; // In x, y (size of pointer array)
+    virtual int Cdimxy_full() const = 0; // Full C size in x,y
     virtual int Cdimz() const = 0;  // In z (size of eigen matrix)
     virtual int MFdimz() const = 0;  // Size of MF vectors in z
     virtual int num_MFs() const = 0;  // Number of mean fields
-    
-    // FFTW plans - leave in public since occasionally necessary outside class
-    fftw_plan plan_2D_for, plan_2D_back;
+    // MPI related
+    virtual int Cdimxy() const = 0; // Size of C array on given MPI process
+    virtual int index_for_k_array() const =0;
     
     // Remapping procedure
     friend void ShearingBox_Remap(Model* model,dcmplxMat* Ckl);
@@ -59,9 +59,7 @@ public:
     
     //////////////////////////////////////////////////////////////////
     //////  AUXILIARY FUNCTIONS OPERATING ON SOLUTION   //////////////
-    virtual void Calc_Energy(double* energy, double t,const dcmplxVec *MFin, const dcmplxMat *Cin ) = 0;
-    virtual void Calc_AngularMomentum(double* AM,double t, const dcmplxVec *MFin, const dcmplxMat *Cin ) = 0;
-    virtual void Calc_Dissipation(double* AM,double t, const dcmplxVec *MFin, const dcmplxMat *Cin ) = 0;
+    virtual void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin ) = 0;
     //////////////////////////////////////////////////////////////////
 
 protected:
@@ -76,6 +74,7 @@ protected:
     dcmplx *kx_,*ky_;
     dcmplxVec kz_;
     doubVec kz2_; // kz^2
+    
 };
 
 

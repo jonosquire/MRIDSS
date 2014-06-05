@@ -6,4 +6,5 @@
 //  Copyright (c) 2014 Jonathan Squire. All rights reserved.
 //
 
- CC = /usr/local/bin/mpic++
+CC = /usr/local/bin/mpic++
+

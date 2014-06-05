@@ -1,13 +1,13 @@
 //
-//  MHD_BQlin.h
+//  lin.h
 //  MRIDSS
 //
 //  Created by Jonathan Squire on 4/25/14.
 //  Copyright (c) 2014 J Squire. All rights reserved.
 //
 
-#ifndef __MRIDSS__MHD_BQlin__
-#define __MRIDSS__MHD_BQlin__
+#ifndef __MRIDSS__Constant_Damping__
+#define __MRIDSS__Constant_Damping__
 
 
 #include "Model.h"
@@ -23,10 +23,10 @@
 // Model class for S3T/CE2 shearing box MHD model
 // Basic Quasi-linear MHD
 // Derived from Model (model.h)
-class MHD_BQlin : public Model {
+class Constant_Damping : public Model {
 public:
-    MHD_BQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
-    ~MHD_BQlin();
+    Constant_Damping(const Inputs& sp, MPIdata& mpi);
+    ~Constant_Damping();
     
     
     // Equations themselves
@@ -49,13 +49,8 @@ public:
     int index_for_k_array() const { return mpi_.minxy_i(); }; // Index for each processor in k_ arrays
     
     
-    // Dealiasing
-    void dealias(dcmplx *arr);
-    
-    //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation
     void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin );
-
 private:
     
     // 2 Mean fields and 4 fluctuating fields in this model
@@ -69,52 +64,18 @@ private:
     const double q_;
     const double f_noise_; // driving noise
     
-    // MPI data
-    MPIdata& mpi_; // Reference to MPI data
     
-    // FFTW plans
-    fftwPlans& fft_;
-    
-    // Dealias setup
-    int delaiasBnds_[2]; // Stores the bounds of the arrays for dealias
-    
-    // Useful arrays to save computation
-    dcmplxMat fft_identity_; // ifft of the identity matrix
-    // Pre-calculate ilap2 related quantities to save computation (mainly for fft matrices)
-    int* ky_index_; // Stores index in ky for a given full nxy index
-    doubVec* lap2_, *ilap2_; // Laplacian and inverse
-    dcmplxMat* fft_ilap2_,*fft_kzilap2_,*fft_kz2ilap2_; // ifft of ilap2, kz*ilap2 and kz^2*ilap2
-    
-    ////////////////////////////////////////////////////
-    //               TEMPORARY VARIABLES              //
-    doubVec lapFtmp_, lap2tmp_; // Laplacians - nice to still have lap2
-    doubVec ilapFtmp_, ilap2tmp_; // Inverse Laplacians
-    
-    dcmplx kxctmp_, kyctmp_;
+    // Temporary variables
+    doubVec lapFtmp_, lap2tmp_;
     double kxtmp_,kytmp_;
     // Qkl temporary
     doubVec Qkl_tmp_;
-    // Operator matrix
-    dcmplxMat Aop_tmp_;
-    dcmplxMat Aop_block_tmp_,Aop_block_tmp2_; // Blocks to use as temporaries
-    // Real versions of B and derivatives
-    dcmplxVec rBy_tmp_;
-    dcmplxVec rDzBy_tmp_;
-    dcmplxVec rDzzBy_tmp_;
-    // fft of full C matrix
-    dcmplxMat ifft_Ckl_tmp_;
     
-    
-    //////////////////////////////////////////////////////
-    //         PRIVATE FUNCTIONS FOR INITIALIZATION     //
-    
-    // Create and store arrays of lap2 to save computation of ffts
-    void Define_Lap2_Arrays_(void);
-    // fft of the identity matrix
-    void Set_fft_identity_(void);
+    // MPI data
+    MPIdata& mpi_; // Reference to MPI data
     
 };
 
 
 
-#endif /* defined(__TwoDFluid__MHD_BQlin__) */
+#endif /* defined(__TwoDFluid__Constant_Damping__) */

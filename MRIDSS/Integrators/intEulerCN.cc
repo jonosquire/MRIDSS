@@ -29,14 +29,13 @@ dt_(dt),  model_(model)
     // Space for diffusion operators
     linop_Ckl_ = new doubVec[dim_Ckl_array_];
     linop_Ckl_old_ = new doubVec[dim_Ckl_array_];
-    for (int i=0; i<dim_Ckl_array_; i++){ // MPI -- Split
+    for (int i=0; i<dim_Ckl_array_; i++){
         linop_Ckl_[i]= doubVec::Zero(size_Ckl_);//Diagonal since diffusion
         linop_Ckl_old_[i]= doubVec(size_Ckl_);
     }
     
-    
     /////////////////////////////////////
-    // SETTING UP MF LINEAR OPERATORS - since constant in time
+    // INITIALIZING LINEAR OPERATORS - MF is constant in time
     linop_MF_ = new doubVec[num_MF_];
     linop_MF_linCo_ = new doubVec[num_MF_];
     linop_MF_NLCo_ = new doubVec[num_MF_];
@@ -57,7 +56,10 @@ dt_(dt),  model_(model)
 
 EulerCN::~EulerCN() {
     delete[] linop_Ckl_;
+    delete[] linop_Ckl_old_;
     delete[] linop_MF_;
+    delete[] linop_MF_linCo_;
+    delete[] linop_MF_NLCo_;
     delete[] Ckl_new_;
     delete[] MF_new_;
     
@@ -65,7 +67,7 @@ EulerCN::~EulerCN() {
 
 int EulerCN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
     
-    model_.rhs(t, 0, MF, Ckl, MF_new_, Ckl_new_,linop_Ckl_);
+    model_.rhs(t, dt_, MF, Ckl, MF_new_, Ckl_new_,linop_Ckl_);
     
     dcmplx * dataC, * dataC_new;
     double * data_linopC, *data_linopC_old;
@@ -76,7 +78,7 @@ int EulerCN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
         dataC_new = Ckl_new_[i].data();
         data_linopC = linop_Ckl_[i].data();
         data_linopC_old = linop_Ckl_old_[i].data();
-        // NB: This method is very nearly as fast as using a pure pointer array (ie. native C++). The data() method seems to have very little overhead.
+        // NB: This method is very nearly as fast as using a pure pointer array (ie. native C++). The data() method seems to have very little overhead as expected
         
         // Replace Ckl_new with dt/(1-dt*L)*Ckl_new
         // and Replace Ckl with (1+dt*L)/(1-dt*L)*Ckl

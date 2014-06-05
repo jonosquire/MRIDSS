@@ -7,11 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A20A82B9193FE9BA00E2DF42 /* intRK2CN.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20A82B7193FE9BA00E2DF42 /* intRK2CN.cc */; };
+		A250B13A1937307A00218230 /* Constant_Damping.cc in Sources */ = {isa = PBXBuildFile; fileRef = A250B1381937307A00218230 /* Constant_Damping.cc */; };
 		A254623A191A60B300920C0A /* Input_parameters.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2546238191A60B300920C0A /* Input_parameters.cc */; };
 		A2546240191AD01B00920C0A /* MPIdata.cc in Sources */ = {isa = PBXBuildFile; fileRef = A254623E191AD01B00920C0A /* MPIdata.cc */; };
 		A2ADBADE19169F860082125D /* intEulerCN.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2ADBADC19169F860082125D /* intEulerCN.cc */; };
 		A2ADBAE11917D7370082125D /* General_Auxiliary.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2ADBADF1917D7370082125D /* General_Auxiliary.cc */; };
-		A2BA0FA11912A96C00866A27 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A2BA0FA01912A96C00866A27 /* main.cpp */; };
+		A2BA0FA11912A96C00866A27 /* main.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2BA0FA01912A96C00866A27 /* main.cc */; };
 		A2BA0FA31912A96C00866A27 /* MRIDSS.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = A2BA0FA21912A96C00866A27 /* MRIDSS.1 */; };
 		A2BA0FB11912B14900866A27 /* intEuler.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2BA0FAB1912B14900866A27 /* intEuler.cc */; };
 		A2BA0FB81912B15F00866A27 /* MHD_BQlin.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2BA0FB51912B15F00866A27 /* MHD_BQlin.cc */; };
@@ -32,6 +34,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A20A82B7193FE9BA00E2DF42 /* intRK2CN.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = intRK2CN.cc; sourceTree = "<group>"; };
+		A20A82B8193FE9BA00E2DF42 /* intRK2CN.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = intRK2CN.h; sourceTree = "<group>"; };
+		A250B1381937307A00218230 /* Constant_Damping.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Constant_Damping.cc; sourceTree = "<group>"; };
+		A250B1391937307A00218230 /* Constant_Damping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constant_Damping.h; sourceTree = "<group>"; };
 		A25462371919B5E900920C0A /* General_Definitions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = General_Definitions.h; sourceTree = "<group>"; };
 		A2546238191A60B300920C0A /* Input_parameters.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Input_parameters.cc; sourceTree = "<group>"; };
 		A2546239191A60B300920C0A /* Input_parameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Input_parameters.h; sourceTree = "<group>"; };
@@ -43,7 +49,7 @@
 		A2ADBADF1917D7370082125D /* General_Auxiliary.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = General_Auxiliary.cc; sourceTree = "<group>"; };
 		A2ADBAE01917D7370082125D /* General_Auxiliary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = General_Auxiliary.h; sourceTree = "<group>"; };
 		A2BA0F9D1912A96C00866A27 /* MRIDSS */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MRIDSS; sourceTree = BUILT_PRODUCTS_DIR; };
-		A2BA0FA01912A96C00866A27 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		A2BA0FA01912A96C00866A27 /* main.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cc; sourceTree = "<group>"; };
 		A2BA0FA21912A96C00866A27 /* MRIDSS.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = MRIDSS.1; sourceTree = "<group>"; };
 		A2BA0FAA1912B14900866A27 /* Integrator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Integrator.h; sourceTree = "<group>"; };
 		A2BA0FAB1912B14900866A27 /* intEuler.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = intEuler.cc; sourceTree = "<group>"; };
@@ -86,7 +92,7 @@
 		A2BA0F9F1912A96C00866A27 /* MRIDSS */ = {
 			isa = PBXGroup;
 			children = (
-				A2BA0FA01912A96C00866A27 /* main.cpp */,
+				A2BA0FA01912A96C00866A27 /* main.cc */,
 				A25462371919B5E900920C0A /* General_Definitions.h */,
 				A2BA0FBE1912F41B00866A27 /* Auxiliary */,
 				A2BA0FB41912B15F00866A27 /* Models */,
@@ -104,6 +110,8 @@
 				A2BA0FAC1912B14900866A27 /* intEuler.h */,
 				A2ADBADC19169F860082125D /* intEulerCN.cc */,
 				A2ADBADD19169F860082125D /* intEulerCN.h */,
+				A20A82B7193FE9BA00E2DF42 /* intRK2CN.cc */,
+				A20A82B8193FE9BA00E2DF42 /* intRK2CN.h */,
 			);
 			path = Integrators;
 			sourceTree = "<group>";
@@ -114,6 +122,8 @@
 				A2BA0FB51912B15F00866A27 /* MHD_BQlin.cc */,
 				A2BA0FB61912B15F00866A27 /* MHD_BQlin.h */,
 				A2BA0FB71912B15F00866A27 /* Model.h */,
+				A250B1381937307A00218230 /* Constant_Damping.cc */,
+				A250B1391937307A00218230 /* Constant_Damping.h */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -126,9 +136,9 @@
 				A2546238191A60B300920C0A /* Input_parameters.cc */,
 				A2546239191A60B300920C0A /* Input_parameters.h */,
 				A2ADBADF1917D7370082125D /* General_Auxiliary.cc */,
+				A2ADBAE01917D7370082125D /* General_Auxiliary.h */,
 				A254623E191AD01B00920C0A /* MPIdata.cc */,
 				A254623F191AD01B00920C0A /* MPIdata.h */,
-				A2ADBAE01917D7370082125D /* General_Auxiliary.h */,
 			);
 			path = Auxiliary;
 			sourceTree = "<group>";
@@ -184,7 +194,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A2BA0FA11912A96C00866A27 /* main.cpp in Sources */,
+				A20A82B9193FE9BA00E2DF42 /* intRK2CN.cc in Sources */,
+				A2BA0FA11912A96C00866A27 /* main.cc in Sources */,
 				A2ADBADE19169F860082125D /* intEulerCN.cc in Sources */,
 				A2546240191AD01B00920C0A /* MPIdata.cc in Sources */,
 				A2BA0FB11912B14900866A27 /* intEuler.cc in Sources */,
@@ -192,6 +203,7 @@
 				A254623A191A60B300920C0A /* Input_parameters.cc in Sources */,
 				A2BA0FB81912B15F00866A27 /* MHD_BQlin.cc in Sources */,
 				A2BA0FC41912F44800866A27 /* Initialization_routines.cc in Sources */,
+				A250B13A1937307A00218230 /* Constant_Damping.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,11 +215,12 @@
 			baseConfigurationReference = A254623D191AC6CC00920C0A /* MPIconfig.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++98";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_CXX0X_EXTENSIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
@@ -253,11 +266,12 @@
 			baseConfigurationReference = A254623D191AC6CC00920C0A /* MPIconfig.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++98";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_CXX0X_EXTENSIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
@@ -301,11 +315,12 @@
 			baseConfigurationReference = A254623D191AC6CC00920C0A /* MPIconfig.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++98";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_CXX0X_EXTENSIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;

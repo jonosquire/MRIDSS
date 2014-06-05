@@ -6,24 +6,53 @@
 //  Copyright (c) 2014 Jonathan Squire. All rights reserved.
 //
 
-#ifndef __MRIDSS__MPIfunctions__
-#define __MRIDSS__MPIfunctions__
+#ifndef __MRIDSS__MPIdata__
+#define __MRIDSS__MPIdata__
 
 #include "../General_Definitions.h"
 
-#endif /* defined(__MRIDSS__MPIfunctions__) */
+
 
 class MPIdata {
 public:
+    // Need to create MPIdata object before knowing number of processors
+    MPIdata(void) : my_node_(0), total_nodes_(1), communicator_size_(1) {}; // The my_node_ and total_nodes_ objects are changed by the call to MPI_Comm_Size etc. in main.cc!!!
+    ~MPIdata(){};
+    
+    // Getter functions
+    int* total_n_p() { return &total_nodes_; }; // Pointer to total_nodes
+    int total_n_v() { return total_nodes_; }; // Value of total number of nodes
+    int* my_n_p() { return &my_node_; };  // Pointer to my_node
+    int my_n_v() { return my_node_; };    // Value of my node
+    int* comm_size_p() { return &communicator_size_; }; //Pointer to communicator size whatever this is
+
+    int nxy() {return nxy_per_node_; };
+    int minxy_i() { return myn_xyi_min_; };
+    int maxxy_i() { return myn_xyi_max_; };
+    
+    
+    // Set up splitting between nodes
+    void Split_NXY_Grid(int nxy_full);
+    
+    // Printing
+    void print1(std::string instr);
+    
+    ////////////////////////////////////////////////////
+    // MPI reduce functions
+    void SumReduce_doub(double* in_p, double* out_p, int size);// Sum double values
+private:
     
     // General MPI data
-    int total_nodes;  // Number of processors
-    int my_node;     // My node
-    int communicator_size; // Something - might want later
+    int total_nodes_;  // Number of processors
+    int my_node_;     // My node
+    int communicator_size_; // Something - might want later
     
     // Data for each node in nxy_full array
-    // This is x,y dimensions data of Ckl, stored as a single pointer array
-    int my_nxyi_min, my_nxyi_max;
+    int nxy_per_node_; // Number of CKl per node
+    // Min/max index in i for nxy_full for each processor
+    int myn_xyi_min_, myn_xyi_max_;
     
     
 };
+
+#endif /* defined(__MRIDSS__MPIdata__) */

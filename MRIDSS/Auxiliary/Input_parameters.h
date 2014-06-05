@@ -14,6 +14,8 @@
 // Class for handling the input parameters and storing the data.
 // This should be a convenient way to input data and have the methods required to process this in a basic way
 
+// Really more like a struct
+
 class Inputs {
 public:
     // Constructor
@@ -24,12 +26,16 @@ public:
            double timvar_save_interval, double fullsol_save_interval,
            bool remapQ, bool QuasiLinearQ) :
     nu(nu), eta(eta), q(q), f_noise(noise),
-    NXY{nx,ny}, NZ(nz), L{lx,ly,lz},
     t_initial(t_initial), t_final(t_final), dt(dt),
     timvar_save_interval(timvar_save_interval), fullsol_save_interval(fullsol_save_interval),
     remapQ(remapQ), QuasiLinearQ(QuasiLinearQ)
-    { initialize();
+    {
+        NXY[0] = nx; NXY[1] = ny; NZ = nz;
+        L[0] = lx; L[1] = ly; L[2] = lz;
+        initialize();
     };
+    
+    // TODO: READ FROM TEXT FILE
     
     ///////////////////////////////////////////////
     /////           USER INPUTS            ////////
@@ -38,7 +44,7 @@ public:
     int NXY[2]; // X and Y grid
     int NZ ; // Z grid
     // Box dimensions
-    const double L[3];
+    double L[3];
     
     // Time domain
     const double dt;
