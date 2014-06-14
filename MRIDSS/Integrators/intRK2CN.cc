@@ -91,6 +91,7 @@ int RK2CN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
     dt_tmp = dt_/2;
     model_.rhs(t, dt_tmp, MF, Ckl, MF_rhs_, Ckl_rhs_,linop_Ckl_);
     
+    // WARNING: SECOND SUBSTEP OF THIS INTEGRATOR REQUIRES INTEGRATOR TO WORK IF in AND out OBJECTS ARE THE SAME. THIS CAN BE A LITTLE TRICKY. HAVE TO BE CAREFUL!!
     // MF_rhs and Ckl_rhs are MF(t+h/2) and Ckl(t+h/2) after this step - saves storage
     for (int i=0; i<dim_Ckl_array_; i++) {
         // Get pointers to various data sets - saves calcuating full mat for lin_op

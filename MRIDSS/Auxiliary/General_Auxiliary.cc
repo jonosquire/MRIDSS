@@ -42,36 +42,21 @@ void ShearingBox_Remap(Model* mod, dcmplxMat* Ckl){
 /////////////////////////////////////////////////////
 
 // fftw plans constructor - creates the plans
-void fftwPlans::calculatePlans( int MF_size,  int Ckl_size) {
+void fftwPlans::calculatePlans( int NZ ) {
     
     
     ////////////////////////////////////////////////
     //      CREATE TEMPORARY EIGEN OBJECTS FOR PLANS
     //  I'm relatively sure it doesn't create fftw problems if you later delete these...
     
-    
-    //  THIS MIGHT BE CAUSING THE BUG!!! IF THE PLAN FUNCTIONS REFERENCE THE POINTER
-    // TO THE DATA (WHICH THEY OBVIOUSLY DO!), AND THEN THAT DATA GOES OUT OF SCOPE
-    // (WHICH IT DOES), THEN IF THE fftw_destroy_plan FUNCTION REFERENCES THE
-    // POINTER DATA IT MIGHT NOT WORK.
-    // BUT WHY WOULD THIS CAUSE A BUG WHEN a IS DESTROYED??
-    
-    
-    
     // Ckl temp
-    dcmplxMat  Ckl_tmp(Ckl_size,Ckl_size);
+    dcmplxMat  Ckl_tmp(NZ,NZ);
     dcmplx * Ckl_p = Ckl_tmp.data();
     
-    // MF vector temps - need in and out separately
-    dcmplxVec MF_tmp1( MF_size );
+    // Vector temps
+    dcmplxVec MF_tmp1( NZ );
     dcmplx * MF_p1 = MF_tmp1.data();
-    dcmplxVec MF_tmp2( MF_size );
-    dcmplx * MF_p2 = MF_tmp2.data();
-    // MF matrix temps - need in and out separately
-    dcmplxMat  MFmat_tmp1(MF_size,MF_size);
-    dcmplx * MFmat_p1 = MFmat_tmp1.data();
-    dcmplxMat  MFmat_tmp2(MF_size,MF_size);
-    dcmplx * MFmat_p2 = MFmat_tmp2.data();
+
     
     ////////////////////////////////////////////////
     //     2D PLANS - full data for Reynold's stress
@@ -79,61 +64,40 @@ void fftwPlans::calculatePlans( int MF_size,  int Ckl_size) {
     // Need fft(fft( Ckl )')' (in Matlab notation), while standard 2-D fft is
     // fft(fft( Ckl ).').', hence the separate calculation for each dimension.
     //
-    // These transforms can be in-place
+    // All transforms can be in-place
 
-    // Something funky going on - memory leak of some sort
     
-    C2D_back_dim2_ = fftw_plan_many_dft(1, &Ckl_size, Ckl_size,
-                                        CAST_T0_FFTW(Ckl_p), NULL, Ckl_size, 1,
-                                        CAST_T0_FFTW(Ckl_p), NULL, Ckl_size, 1,
-                                        FFTW_FORWARD, MY_FFTWPLAN);
-    C2D_for_dim1_ = fftw_plan_many_dft(1, &Ckl_size, Ckl_size,
-                                       CAST_T0_FFTW(Ckl_p), NULL, 1, Ckl_size,
-                                       CAST_T0_FFTW(Ckl_p), NULL, 1, Ckl_size,
+    
+    t2D_for_dim1_ = fftw_plan_many_dft(1, &NZ, NZ,
+                                       CAST_T0_FFTW(Ckl_p), NULL, 1, NZ,
+                                       CAST_T0_FFTW(Ckl_p), NULL, 1, NZ,
                                        FFTW_FORWARD, MY_FFTWPLAN);
-    C2D_for_dim2_ = fftw_plan_many_dft(1, &Ckl_size, Ckl_size,
-                                       CAST_T0_FFTW(Ckl_p), NULL, Ckl_size, 1,
-                                       CAST_T0_FFTW(Ckl_p), NULL, Ckl_size, 1,
+    t2D_for_dim2_ = fftw_plan_many_dft(1, &NZ, NZ,
+                                       CAST_T0_FFTW(Ckl_p), NULL, NZ, 1,
+                                       CAST_T0_FFTW(Ckl_p), NULL, NZ, 1,
                                        FFTW_FORWARD, MY_FFTWPLAN);
-    C2D_back_dim1_ = fftw_plan_many_dft(1, &Ckl_size, Ckl_size,
-                                        CAST_T0_FFTW(Ckl_p), NULL, 1, Ckl_size,
-                                        CAST_T0_FFTW(Ckl_p), NULL, 1, Ckl_size,
-                                        FFTW_FORWARD, MY_FFTWPLAN);
+    t2D_back_dim1_ = fftw_plan_many_dft(1, &NZ, NZ,
+                                        CAST_T0_FFTW(Ckl_p), NULL, 1, NZ,
+                                        CAST_T0_FFTW(Ckl_p), NULL, 1, NZ,
+                                        FFTW_BACKWARD, MY_FFTWPLAN);
+    t2D_back_dim2_ = fftw_plan_many_dft(1, &NZ, NZ,
+                                        CAST_T0_FFTW(Ckl_p), NULL, NZ, 1,
+                                        CAST_T0_FFTW(Ckl_p), NULL, NZ, 1,
+                                        FFTW_BACKWARD, MY_FFTWPLAN);
 
     
     ////////////////////////////////////////////////
-    //      MF plans
+    //   1D Plans
     //  Need both a 1-D plan and a 1-D*NZ plan
     //
-    // Useful to have both in-place and out of place plans available
+    // Only in place transforms have been useful, could delete others
    
     // True 1-D plans
-    MF1D_for_ = fftw_plan_dft_1d(MF_size, CAST_T0_FFTW(MF_p1), CAST_T0_FFTW(MF_p2),
+    t1D_for_ = fftw_plan_dft_1d(NZ, CAST_T0_FFTW(MF_p1), CAST_T0_FFTW(MF_p1),
                                  FFTW_FORWARD, MY_FFTWPLAN);
-    MF1D_back_ = fftw_plan_dft_1d(MF_size, CAST_T0_FFTW(MF_p1), CAST_T0_FFTW(MF_p2),
-                                  FFTW_BACKWARD, MY_FFTWPLAN);
-    MF1D_IP_for_ = fftw_plan_dft_1d(MF_size, CAST_T0_FFTW(MF_p1), CAST_T0_FFTW(MF_p1),
-                                 FFTW_FORWARD, MY_FFTWPLAN);
-    MF1D_IP_back_ = fftw_plan_dft_1d(MF_size, CAST_T0_FFTW(MF_p1), CAST_T0_FFTW(MF_p1),
+    t1D_back_ = fftw_plan_dft_1d(NZ, CAST_T0_FFTW(MF_p1), CAST_T0_FFTW(MF_p1),
                                   FFTW_BACKWARD, MY_FFTWPLAN);
     
-    // 1-D*NZ plans
-    MF2D_for_ = fftw_plan_many_dft(1, &MF_size, MF_size,
-                                   CAST_T0_FFTW(MFmat_p1), NULL, 1, MF_size,
-                                   CAST_T0_FFTW(MFmat_p2), NULL, 1, MF_size,
-                                   FFTW_FORWARD, MY_FFTWPLAN);
-    MF2D_back_ = fftw_plan_many_dft(1, &MF_size, MF_size,
-                                   CAST_T0_FFTW(MFmat_p1), NULL, 1, MF_size,
-                                   CAST_T0_FFTW(MFmat_p2), NULL, 1, MF_size,
-                                   FFTW_BACKWARD, MY_FFTWPLAN);
-    MF2D_IP_for_ = fftw_plan_many_dft(1, &MF_size, MF_size,
-                                   CAST_T0_FFTW(MFmat_p1), NULL, 1, MF_size,
-                                   CAST_T0_FFTW(MFmat_p1), NULL, 1, MF_size,
-                                   FFTW_FORWARD, MY_FFTWPLAN);
-    MF2D_IP_back_ = fftw_plan_many_dft(1, &MF_size, MF_size,
-                                    CAST_T0_FFTW(MFmat_p1), NULL, 1, MF_size,
-                                    CAST_T0_FFTW(MFmat_p1), NULL, 1, MF_size,
-                                    FFTW_BACKWARD, MY_FFTWPLAN);
     
     // Flag to use in destructor
     plans_calculated_ = 1;
@@ -148,20 +112,14 @@ fftwPlans::~fftwPlans() {
    // std::cout << "Destroying " << std::endl;
     if (plans_calculated_) {
         // Ckl plans
-        fftw_destroy_plan(C2D_for_dim1_);
-        fftw_destroy_plan(C2D_for_dim2_);
-        fftw_destroy_plan(C2D_back_dim1_);
-        fftw_destroy_plan(C2D_back_dim2_);
+        fftw_destroy_plan(t2D_for_dim1_);
+        fftw_destroy_plan(t2D_for_dim2_);
+        fftw_destroy_plan(t2D_back_dim1_);
+        fftw_destroy_plan(t2D_back_dim2_);
         
         // MF plans
-        fftw_destroy_plan(MF1D_for_);
-        fftw_destroy_plan(MF1D_back_);
-        fftw_destroy_plan(MF1D_IP_for_);
-        fftw_destroy_plan(MF1D_IP_back_);
-        fftw_destroy_plan(MF2D_for_);
-        fftw_destroy_plan(MF2D_back_);
-        fftw_destroy_plan(MF2D_IP_for_);
-        fftw_destroy_plan(MF2D_IP_back_);
+        fftw_destroy_plan(t1D_for_);
+        fftw_destroy_plan(t1D_back_);
     }
     
     fftw_cleanup();
@@ -185,21 +143,76 @@ fftwPlans::~fftwPlans() {
 int TimeVariables::curr_pos_ = 0;
 
 // Constructor
-TimeVariables::TimeVariables(int nsteps, int width, int mpinode) :
-nsteps_(nsteps), width_(width), mpi_node_(mpinode)
+TimeVariables::TimeVariables(Inputs SP, int width, int mpinode) :
+nsteps_(SP.nsteps/SP.timevar_save_nsteps + 1), width_(width), mpi_node_(mpinode),
+simulation_dir_(SP.simulation_dir), MFlen_(0)
 {
     // Main variables
     // Store only on 1-processor - presumbably this is better
+    // TODO: Only allocate necessary memory?
     if (mpi_node_ == 0) {
-        energy_ = new double*[nsteps];
-        angular_momentum_ = new double*[nsteps];
-        dissipation_ = new double*[nsteps];
-        for (int i=0; i<nsteps; ++i) {
+        energy_ = new double*[nsteps_];
+        angular_momentum_ = new double*[nsteps_];
+        dissipation_ = new double*[nsteps_];
+        for (int i=0; i<nsteps_; ++i) {
             energy_[i] = new double[width_];
             angular_momentum_[i] = new double[width_];
             dissipation_[i] = new double[width_];
         }
     }
+    
+    // Saving to disk - TODO improve to save at regular intervals?
+    fname_energy_ = simulation_dir_ + "energy.dat";
+    fname_angular_momentum_ = simulation_dir_ + "angular_momentum.dat";
+    fname_dissipation_ = simulation_dir_ + "dissipation.dat";
+    // Mean fields
+    fname_mean_fields_ = simulation_dir_ + "mean_fields.dat";
+    
+    if (mpi_node_ == 0) {
+        if (SP.energy_save_Q_) {
+            fileS_energy_.open(fname_energy_.c_str(), std::ios::binary);
+            if (!fileS_energy_.is_open() ) {
+                std::cout << "WARNING: " << fname_energy_ <<  " file unable to be opened" << std::endl;
+            }
+        }
+        if (SP.AM_save_Q_) {
+            fileS_angular_momentum_.open(fname_angular_momentum_.c_str(), std::ios::binary);
+            if (!fileS_angular_momentum_.is_open() ) {
+                std::cout << "WARNING: " << fname_angular_momentum_ <<  " file unable to be opened" << std::endl;
+            }
+        }
+        if (SP.dissipation_save_Q_) {
+            fileS_dissipation_.open(fname_dissipation_.c_str(), std::ios::binary);
+            if (!fileS_dissipation_.is_open() ) {
+                std::cout << "WARNING: " << fname_dissipation_ <<  " file unable to be opened" << std::endl;
+            }
+        }
+        // Mean fields
+        if (SP.mean_field_save_Q_) {
+            fileS_mean_fields_.open(fname_mean_fields_.c_str(), std::ios::binary);
+            if (!fileS_mean_fields_.is_open() ) {
+                std::cout << "WARNING: " << fname_mean_fields_ <<  " file unable to be opened" << std::endl;
+            }
+        }
+        
+        ////////////////////////////////////////
+        //        Save time data
+        std::ofstream fileS_time;
+        fileS_time.open((simulation_dir_+"time_vec.dat").c_str(),std::ios::binary);
+        double *t_vec = new double[nsteps_];
+        double dttmp = SP.timvar_save_interval;
+        for (int i=0; i<nsteps_; ++i) {
+            t_vec[i] = i*dttmp;
+        }
+        // Write
+        fileS_time.write( (char*) t_vec, sizeof(t_vec)*nsteps_);
+        // Clean-up
+        delete [] t_vec;
+        fileS_time.close();
+        ////////////////////////////////////////
+    }
+    
+    
 }
 
 // Destructor
@@ -215,8 +228,74 @@ TimeVariables::~TimeVariables() {
     delete[] angular_momentum_;
     delete[] dissipation_;
     
+    fileS_energy_.close();
+    fileS_angular_momentum_.close();
+    fileS_dissipation_.close();
+    fileS_mean_fields_.close();
+    
 }
 
+
+// Save the data to disk
+void TimeVariables::Save_Data(){
+    // This can be run on all processes, but file will only be open on processor 0
+    
+    if (fileS_energy_.is_open()) {
+        // Must write each individually since don't know that it is continuous in memory
+        for (int i=0; i<nsteps_; ++i) {
+            fileS_energy_.write( (char*) energy_[i], sizeof(energy_)*width_);
+        }
+        // Read into matlab as a double (4*nsteps) array
+    }
+    if (fileS_angular_momentum_.is_open()) {
+        // Must write each individually since don't know that it is continuous in memory
+        for (int i=0; i<nsteps_; ++i) {
+            fileS_angular_momentum_.write( (char*) angular_momentum_[i], sizeof(energy_)*width_);
+        }
+        // Read into matlab as a double (4*nsteps) array
+    }
+    if (fileS_dissipation_.is_open()) {
+        // Must write each individually since don't know that it is continuous in memory
+        for (int i=0; i<nsteps_; ++i) {
+            fileS_dissipation_.write( (char*) dissipation_[i], sizeof(energy_)*width_);
+        }
+        // Read into matlab as a double (4*nsteps) array
+    }
+
+    
+}
+
+
+// Save Mean field data
+void TimeVariables::Save_Mean_Fields(dcmplxVec *MF, int numMF, fftwPlans& fft){
+    // Could certainly be improved - just dumps the data into fname_mean_fields
+    
+    // IN MATLAB
+    // Saves MF[i] sequentially from 0 to numMF. Data is double
+    
+    // Not very fast I'm sure, but won't be important
+    // is_open() will only evaluate to true on proc 1
+    if (fileS_mean_fields_.is_open()) {
+        // Initialize data
+        if (MFlen_ == 0 ) {
+            MFlen_ = MF[0].size();
+            MFdata_c_ = dcmplxVec( MFlen_);
+            MFdata_d_ = doubVec (MFlen_);
+        }
+        
+        // Save each MF variable sequentially
+        for (int i=0; i<numMF; ++i) {
+            // Take fft - could be done faster with c_to_r fft
+            MFdata_c_ = MF[i];
+            fft.back_1D(MFdata_c_.data());
+            MFdata_d_ = MFdata_c_.real()/MFlen_;
+            //Save
+            fileS_mean_fields_.write( (char*) MFdata_d_.data(), sizeof(double)*MFlen_);
+        }
+        
+        
+    }
+}
 //                                                 //
 /////////////////////////////////////////////////////
 

@@ -23,7 +23,7 @@ void MPIdata::Split_NXY_Grid(int nxy_full){
             std::cout << "<<<<< Error >>>>>" << std::endl <<
             "Number of MPI processes must be a multiple of the grid size!!" << std::endl;
             std::cout << "Grid size: " << nxy_full << ", Processors: " << total_nodes_ << std::endl;
-            MPI_Abort(MPI_COMM_WORLD, 1);
+            ABORT;
         }
     }
     
@@ -57,11 +57,49 @@ void MPIdata::print1(std::string instr) {
 void MPIdata::SumReduce_doub(double* in_p, double* out_p, int size) {
     // MPI_Reduce wrapper for data of type double - convenient for multiple reasons
     // Always reduces to processor 0 right now
-#ifdef MPI_USE_FLAG
+#ifdef USE_MPI_FLAG
     MPI_Reduce(in_p, out_p, size, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 #else
     for (int i=0; i<size; ++i) {
         out_p[i] = in_p[i];
     }
 #endif
+
 }
+
+void MPIdata::SumReduce_IP_doub(double* in_p, int size) {
+    // MPI_Reduce wrapper for data of type double - convenient for multiple reasons
+    // Always reduces to processor 0 right now
+#ifdef USE_MPI_FLAG
+    if (my_n_v() == 0) {
+        MPI::COMM_WORLD.Reduce(MPI::IN_PLACE, in_p, size, MPI::DOUBLE, MPI::SUM, 0);
+    } else {
+        MPI::COMM_WORLD.Reduce(in_p, NULL, size, MPI::DOUBLE, MPI::SUM, 0);
+    }
+    
+#endif
+    
+}
+
+// Sum AllReduce double
+void MPIdata::SumAllReduce_IP_double(double* in_p, int size) {
+    // MPI_AllReduce wrapper for data of type double - convenient for multiple reasons
+    // This one is in-place
+#ifdef USE_MPI_FLAG
+    MPI::COMM_WORLD.Allreduce(MPI::IN_PLACE, in_p, size, MPI::DOUBLE, MPI::SUM);
+#endif
+}
+
+// Sum AllReduce double
+void MPIdata::SumAllReduce_double(double* in_p, double *out_p, int size) {
+    // MPI_AllReduce wrapper for data of type double - convenient for multiple reasons
+    // This one is in-place
+#ifdef USE_MPI_FLAG
+    MPI::COMM_WORLD.Allreduce( in_p, out_p, size, MPI::DOUBLE, MPI::SUM);
+#else
+    for (int i=0; i<size; ++i) {
+        out_p[i] = in_p[i];
+    }
+#endif
+}
+

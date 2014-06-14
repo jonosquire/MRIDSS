@@ -15,10 +15,10 @@
 #include "../Integrators/Integrator.h"
 
 #include "MPIdata.h"
-
+#include "General_Auxiliary.h"
 
 // Initial conditions
-void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, int numMF, int NXY);
+void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, int numMF, int NXY, MPIdata& mpi, fftwPlans& fft);
 // Initialize solutions
 void Initialize_Solutions(dcmplxVec *MF, dcmplxMat* Ckl, Model* fluidEqs);
 

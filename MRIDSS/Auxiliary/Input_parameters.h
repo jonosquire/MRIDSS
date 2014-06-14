@@ -11,6 +11,8 @@
 
 #include "../General_Definitions.h"
 
+#include "../Auxiliary/MPIdata.h"
+
 // Class for handling the input parameters and storing the data.
 // This should be a convenient way to input data and have the methods required to process this in a basic way
 
@@ -19,26 +21,12 @@
 class Inputs {
 public:
     // Constructor
-    Inputs(double nu, double eta, double q,
-           double noise,
-           int nx, int ny, int nz, double lx,double ly, double lz,
-           double t_initial, double t_final, double dt,
-           double timvar_save_interval, double fullsol_save_interval,
-           bool remapQ, bool QuasiLinearQ) :
-    nu(nu), eta(eta), q(q), f_noise(noise),
-    t_initial(t_initial), t_final(t_final), dt(dt),
-    timvar_save_interval(timvar_save_interval), fullsol_save_interval(fullsol_save_interval),
-    remapQ(remapQ), QuasiLinearQ(QuasiLinearQ)
-    {
-        NXY[0] = nx; NXY[1] = ny; NZ = nz;
-        L[0] = lx; L[1] = ly; L[2] = lz;
-        initialize();
-    };
+    Inputs(const MPIdata& mpi);
     
-    // TODO: READ FROM TEXT FILE
+
     
     ///////////////////////////////////////////////
-    /////           USER INPUTS            ////////
+    /////       USER INPUTS (through file)   //////
     
     // Grid size
     int NXY[2]; // X and Y grid
@@ -47,24 +35,30 @@ public:
     double L[3];
     
     // Time domain
-    const double dt;
-    const double t_final; // Final time
-    const double t_initial; // Initial time
+    double dt;
+    double t_final; // Final time
+    double t_initial; // Initial time
     // Saving
-    const double timvar_save_interval;   // Interval for saving energy, AM etc.
-    const double fullsol_save_interval;   // Interval for saving full solution
+    double timvar_save_interval;   // Interval for saving energy, AM etc.
+    double fullsol_save_interval;   // Interval for saving full solution
     
     // Dissipation
-    const double nu;   // Viscosity
-    const double eta;   // Resisitivity - could ignore for hydrodynamic
+    double nu;   // Viscosity
+    double eta;   // Resisitivity - could ignore for hydrodynamic
     // Shear
-    const double q;  // Shear rate
+    double q;  // Shear rate
     // Noise
-    const double f_noise;  // Driving noise (un-normalized)
+    double f_noise;  // Driving noise (un-normalized)
     // Shearing box
     bool remapQ;   // Whether to remap or not
     // Include quasi-linear feedback
     bool QuasiLinearQ;
+    
+    // Time variables to save
+    bool energy_save_Q_;
+    bool AM_save_Q_;
+    bool dissipation_save_Q_;
+    bool mean_field_save_Q_;
     
     ///////////////////////////////////////////////
 
@@ -78,11 +72,26 @@ public:
     double TSB; // Time before remap = LY/LX/q
     int num_before_remap;  // Number of steps before remap
     
+    // Directory for data storage
+    std::string simulation_dir;
+    
+    
+    
+    
+    
 
     ////////////////////////////////////////////////
     //////              FUNCTIONS             //////
     
-    void initialize();
+    void initialize_();
+    // Read from text file
+    template <class T>
+    T Read_From_Input_File_(const std::string& varstr, const std::string& full_file, T default_value);
+    // Find input file .DSSinput
+    std::string Find_Input_File(const std::string& directory);
+    
+private:
+    int mpi_node_; // Mpi ode for internal usage
 
 };
 

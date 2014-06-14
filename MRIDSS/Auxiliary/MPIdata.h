@@ -21,14 +21,14 @@ public:
     
     // Getter functions
     int* total_n_p() { return &total_nodes_; }; // Pointer to total_nodes
-    int total_n_v() { return total_nodes_; }; // Value of total number of nodes
+    int total_n_v() const { return total_nodes_; }; // Value of total number of nodes
     int* my_n_p() { return &my_node_; };  // Pointer to my_node
-    int my_n_v() { return my_node_; };    // Value of my node
+    int my_n_v() const { return my_node_; };    // Value of my node
     int* comm_size_p() { return &communicator_size_; }; //Pointer to communicator size whatever this is
 
-    int nxy() {return nxy_per_node_; };
-    int minxy_i() { return myn_xyi_min_; };
-    int maxxy_i() { return myn_xyi_max_; };
+    int nxy() const {return nxy_per_node_; };
+    int minxy_i() const { return myn_xyi_min_; };
+    int maxxy_i() const { return myn_xyi_max_; };
     
     
     // Set up splitting between nodes
@@ -40,6 +40,9 @@ public:
     ////////////////////////////////////////////////////
     // MPI reduce functions
     void SumReduce_doub(double* in_p, double* out_p, int size);// Sum double values
+    void SumReduce_IP_doub(double* in_p, int size);// Sum double values
+    void SumAllReduce_IP_double(double* in_p, int size); //Sum double, in place
+    void SumAllReduce_double(double* in_p, double*out_p, int size);//Sum double,
 private:
     
     // General MPI data

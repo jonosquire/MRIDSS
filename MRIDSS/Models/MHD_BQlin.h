@@ -50,7 +50,8 @@ public:
     
     
     // Dealiasing
-    void dealias(dcmplx *arr);
+    void dealias(dcmplx *arr); // 2-D version - TODO tidy up
+    void dealias(dcmplxVec& vec); // 1-D version
     
     //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation
@@ -68,6 +69,7 @@ private:
     const double eta_;// viscosity & resistivity
     const double q_;
     const double f_noise_; // driving noise
+    const double QL_YN_; // Turn on quasi-linear feedback
     
     // MPI data
     MPIdata& mpi_; // Reference to MPI data
@@ -85,6 +87,16 @@ private:
     doubVec* lap2_, *ilap2_; // Laplacian and inverse
     dcmplxMat* fft_ilap2_,*fft_kzilap2_,*fft_kz2ilap2_; // ifft of ilap2, kz*ilap2 and kz^2*ilap2
     
+    
+    // Reynolds stress - store both complex and double for fft and to pass less data around with MPI
+    // complex
+    dcmplxVec bzux_m_uzbx_c_; // bz*ux-uz*bx
+    dcmplxVec bzuy_m_uzby_c_; // bz*uy - uz*by
+    // double
+    doubVec bzux_m_uzbx_d_, bzux_m_uzbx_drec_; // bz*ux-uz*bx
+    doubVec bzuy_m_uzby_d_, bzuy_m_uzby_drec_; // bz*uy - uz*by
+
+    
     ////////////////////////////////////////////////////
     //               TEMPORARY VARIABLES              //
     doubVec lapFtmp_, lap2tmp_; // Laplacians - nice to still have lap2
@@ -101,8 +113,10 @@ private:
     dcmplxVec rBy_tmp_;
     dcmplxVec rDzBy_tmp_;
     dcmplxVec rDzzBy_tmp_;
-    // fft of full C matrix
-    dcmplxMat ifft_Ckl_tmp_;
+    // Reynolds stresses
+    dcmplxMat reynolds_mat_tmp_; // Temporary matrix storage for fft
+    Eigen::Matrix<dcmplx, Eigen::Dynamic, 1> rey_mkxky_tmp_,rey_kz_tmp_,rey_mkxkz_tmp_,rey_mky_tmp_; // Convenient to store vectors for converting between u, zeta etc. and u uy uz...
+
     
     
     //////////////////////////////////////////////////////

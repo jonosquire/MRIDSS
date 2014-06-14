@@ -13,6 +13,7 @@
 
 #include "../Models/Model.h"
 #include "../Integrators/Integrator.h"
+#include "Input_parameters.h"
 
 void ShearingBox_Remap(Model* mod, dcmplxMat* Ckl);
 
@@ -26,67 +27,44 @@ public:
     ~fftwPlans();
     // No Copy constructor, but should only have one instance anyway
     // Setup plans
-    void calculatePlans( int MF_size,  int Ckl_size);
+    void calculatePlans( int NZ );
     
     /////////////////////////////////////////////////////
     // Functions for exectuting the various FFTs, given pointers to data
     
     // Ckl matrix FFTs
-    void for_C2D_d1(dcmplx* Cklin){
-        fftw_execute_dft(C2D_for_dim1_,CAST_T0_FFTW(Cklin),CAST_T0_FFTW(Cklin));
+    void for_2D_dim1(dcmplx* Cklin){
+        fftw_execute_dft(t2D_for_dim1_,CAST_T0_FFTW(Cklin),CAST_T0_FFTW(Cklin));
     };
-    void for_C2D_d2(dcmplx* Cklin){
-        fftw_execute_dft(C2D_for_dim2_,CAST_T0_FFTW(Cklin),CAST_T0_FFTW(Cklin));
+    void for_2D_dim2(dcmplx* Cklin){
+        fftw_execute_dft(t2D_for_dim2_,CAST_T0_FFTW(Cklin),CAST_T0_FFTW(Cklin));
     };
-    void back_C2D_d1(dcmplx* Cklin){
-        fftw_execute_dft(C2D_back_dim1_,CAST_T0_FFTW(Cklin),CAST_T0_FFTW(Cklin));
+    void back_2D_dim1(dcmplx* Cklin){
+        fftw_execute_dft(t2D_back_dim1_,CAST_T0_FFTW(Cklin),CAST_T0_FFTW(Cklin));
     };
-    void back_C2D_d2(dcmplx* Cklin){
-        fftw_execute_dft(C2D_back_dim2_,CAST_T0_FFTW(Cklin),CAST_T0_FFTW(Cklin));
+    void back_2D_dim2(dcmplx* Cklin){
+        fftw_execute_dft(t2D_back_dim2_,CAST_T0_FFTW(Cklin),CAST_T0_FFTW(Cklin));
     };
 
     // 1-D MF transforms
-    void for_MF1D(dcmplx* MFin,dcmplx* MFout){
-        fftw_execute_dft(MF1D_for_,CAST_T0_FFTW(MFin),CAST_T0_FFTW(MFout));
+    void for_1D(dcmplx* MFin){
+        fftw_execute_dft(t1D_for_,CAST_T0_FFTW(MFin),CAST_T0_FFTW(MFin));
     };
-    void back_MF1D(dcmplx* MFin,dcmplx* MFout){
-        fftw_execute_dft(MF1D_back_,CAST_T0_FFTW(MFin),CAST_T0_FFTW(MFout));
-    };
-    void for_IP_MF1D(dcmplx* MFin){
-        fftw_execute_dft(MF1D_IP_for_,CAST_T0_FFTW(MFin),CAST_T0_FFTW(MFin));
-    };
-    void back_IP_MF1D(dcmplx* MFin){
-        fftw_execute_dft(MF1D_IP_back_,CAST_T0_FFTW(MFin),CAST_T0_FFTW(MFin));
+    void back_1D(dcmplx* MFin){
+        fftw_execute_dft(t1D_back_,CAST_T0_FFTW(MFin),CAST_T0_FFTW(MFin));
     };
 
-    // 1-D*NZ MF transforms
-    void for_MF2D(dcmplx* mMFin,dcmplx* mMFout){
-        fftw_execute_dft(MF2D_for_,CAST_T0_FFTW(mMFin),CAST_T0_FFTW(mMFout));
-    };
-    void back_MF2D(dcmplx* mMFin,dcmplx* mMFout){
-        fftw_execute_dft(MF2D_back_,CAST_T0_FFTW(mMFin),CAST_T0_FFTW(mMFout));
-    };
-    void for_IP_MF2D(dcmplx* mMFin){
-        fftw_execute_dft(MF2D_IP_for_,CAST_T0_FFTW(mMFin),CAST_T0_FFTW(mMFin));
-    };
-    void back_IP_MF2D(dcmplx* mMFin){
-        fftw_execute_dft(MF2D_IP_back_,CAST_T0_FFTW(mMFin),CAST_T0_FFTW(mMFin));
-    };
     /////////////////////////////////////////////////////
 
     
 private:
-    // Transforms of Ckl for Reynolds stress
-    fftw_plan C2D_for_dim1_, C2D_for_dim2_;  // Forward 2-D transform
-    fftw_plan C2D_back_dim1_, C2D_back_dim2_;  // Backward 2-D transform
+    // Transforms of 2-D data
+    // Need both dimensions (sceond is used for 2-D transform in Reynolds stress)
+    fftw_plan t2D_for_dim1_, t2D_for_dim2_;  // Forward 2-D transform
+    fftw_plan t2D_back_dim1_, t2D_back_dim2_;  // Backward 2-D transform
     
     // Transforms of 1-D MF data
-    fftw_plan MF1D_for_, MF1D_IP_for_;  // Forward 1-D transform
-    fftw_plan MF1D_back_,MF1D_IP_back_; // Backward 1-D transform
-    
-    // 1-D transforms of matrices of MF-like quantities
-    fftw_plan MF2D_for_, MF2D_IP_for_; // Forward transform, don't need dim1 and dim2, since it's NZ 1-D transforms
-    fftw_plan MF2D_back_, MF2D_IP_back_; // Backward transform
+    fftw_plan t1D_for_, t1D_back_;  // Forward 1-D transform
     
     bool plans_calculated_; // 1 if calculatePlans has been run
     
@@ -98,7 +76,7 @@ private:
 class TimeVariables {
 public:
     // Constructor
-    TimeVariables(int nsteps, int width, int mpinode); // nsteps is number of saves, width is number to save
+    TimeVariables(Inputs SP,  int width, int mpinode); // nsteps is number of saves, width is number to save
     // Destructor
     ~TimeVariables();
     
@@ -115,6 +93,13 @@ public:
     // MPI node
     int tv_mpi_node() {return mpi_node_;};
     
+    // Save data - Change to each time-step?
+    void Save_Data();
+    
+    // Save mean fields - could improve
+    void Save_Mean_Fields(dcmplxVec *MFdata, int numMF, fftwPlans& fft);
+    
+    
 private:
     // Basic data
     const int nsteps_;  // Number of saves (length of array)
@@ -124,9 +109,28 @@ private:
     double ** energy_;
     double ** angular_momentum_;
     double ** dissipation_;
+    // Saving these variables - file streams
+    std::ofstream fileS_energy_;
+    std::ofstream fileS_angular_momentum_;
+    std::ofstream fileS_dissipation_;
+    // Saving these variables - file name
+    std::string fname_energy_;
+    std::string fname_angular_momentum_;
+    std::string fname_dissipation_;
+    
+    // Mean fields
+    std::ofstream fileS_mean_fields_;
+    std::string fname_mean_fields_;
+    dcmplxVec MFdata_c_; // Space for taking fft and converting to real
+    doubVec MFdata_d_;
+    long MFlen_; // Set to zero once and change at first save
+    
+    // Directory
+    std::string simulation_dir_;
     
     // Current position in the time dimension
     static int curr_pos_;
+
     
     // MPI node on which the data is stored
     int mpi_node_;

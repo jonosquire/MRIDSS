@@ -34,6 +34,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A20239AB19497CA400275CD9 /* SW_test.DSSinput */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SW_test.DSSinput; sourceTree = "<group>"; };
 		A20A82B7193FE9BA00E2DF42 /* intRK2CN.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = intRK2CN.cc; sourceTree = "<group>"; };
 		A20A82B8193FE9BA00E2DF42 /* intRK2CN.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = intRK2CN.h; sourceTree = "<group>"; };
 		A250B1381937307A00218230 /* Constant_Damping.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Constant_Damping.cc; sourceTree = "<group>"; };
@@ -93,6 +94,7 @@
 			isa = PBXGroup;
 			children = (
 				A2BA0FA01912A96C00866A27 /* main.cc */,
+				A20239AB19497CA400275CD9 /* SW_test.DSSinput */,
 				A25462371919B5E900920C0A /* General_Definitions.h */,
 				A2BA0FBE1912F41B00866A27 /* Auxiliary */,
 				A2BA0FB41912B15F00866A27 /* Models */,

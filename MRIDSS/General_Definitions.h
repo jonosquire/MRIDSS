@@ -14,7 +14,7 @@
 /////              MPI FLAG               ////////
 // This is better as a preprocessor directive since it lets you debug in serial more easily
 
-#define USE_MPI_FLAG
+//#define USE_MPI_FLAG
 
 //////////////////////////////////////////////////
 
@@ -27,17 +27,22 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string>
+#include <iomanip>
 #include <complex>
-#include <random>
-#include <chrono>
+//#include <random>
+#include <ctime>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 
 // External libraries
 #ifdef USE_MPI_FLAG
     #include <mpi.h>
 #endif
 #include <fftw3.h>
-// #define EIGEN_NO_DEBUG  // Define to turn off eigen range checking
+#define EIGEN_NO_DEBUG  // Define to turn off eigen range checking
 #include "../Eigen/Dense"
+#include "../External_headers/tinydir.h"
 
 
 
@@ -45,12 +50,20 @@
 // Convenient FFTW definitions
 
 // FFTW planning mechanism
-#define MY_FFTWPLAN FFTW_MEASURE
+#define MY_FFTWPLAN FFTW_EXHAUSTIVE
 // Reinterpret dcmplx for use in fftw routines
 #define CAST_T0_FFTW(a) reinterpret_cast<fftw_complex*>(&(a)[0])
 
 //////////////////////////////////////////////////
 
+
+/////////////////////////////////////////////////////
+//  Aborting - useful to have MPI abort. (obviously would be better with execptions)
+#ifdef USE_MPI_FLAG
+    #define ABORT MPI_Abort(MPI_COMM_WORLD,1);
+#else
+    #define ABORT abort();
+#endif
 
 //////////////////////////////////////////////////
 // Eigen matrix and array typedefs
@@ -67,5 +80,7 @@ typedef Eigen::Array<double, Eigen::Dynamic, 1> doubVec;// For use in linear par
 
 const double PI=atan(1)*4;
 
+const std::string CURR_BASE_DIR = "/Users/jsquire/Documents/MRIDSS/MRIDSS/";
+const std::string DATA_DIR = "Data/";
 
 #endif
