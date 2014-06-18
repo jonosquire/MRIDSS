@@ -16,13 +16,19 @@ dt_(dt),  model_(model)
 {
     // Assigning necessary temporary space
     MF_rhs_ =new dcmplxVec[num_MF_];
-    for (int i=0; i<num_MF_; i++)
+    MF_th2_ =new dcmplxVec[num_MF_];
+    for (int i=0; i<num_MF_; i++){
         MF_rhs_[i]= dcmplxVec(size_MF_);
+        MF_th2_[i]= dcmplxVec(size_MF_);
+    }
     
     // C matrices
     Ckl_rhs_ =new dcmplxMat[dim_Ckl_array_];
-    for (int i=0; i<dim_Ckl_array_; i++) // Split across processors
+    Ckl_th2_ = new dcmplxMat[dim_Ckl_array_];
+    for (int i=0; i<dim_Ckl_array_; i++) {// Split across processors
         Ckl_rhs_[i]= dcmplxMat(size_Ckl_,size_Ckl_);
+        Ckl_th2_[i]= dcmplxMat(size_Ckl_,size_Ckl_);
+    }
     
     //////////////////////////////////////
     ////////   LINEAR OPERATORS //////////
@@ -82,7 +88,7 @@ RK2CN::~RK2CN() {
 int RK2CN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
     
     // Temporary pointer variables
-    dcmplx * dataC, * dataC_rhs;
+    dcmplx * dataC, * dataC_rhs, *dataC_th2;
     double * data_linopC, *data_linopC_old;
     double denom, dt_tmp;// Temporary storage for loop
     
@@ -97,6 +103,7 @@ int RK2CN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
         // Get pointers to various data sets - saves calcuating full mat for lin_op
         dataC = Ckl[i].data();  // This is not re-written
         dataC_rhs = Ckl_rhs_[i].data();
+        dataC_th2 = Ckl_th2_[i].data();
         data_linopC = linop_Ckl_[i].data(); // At time t+dt/2
         data_linopC_old = linop_Ckl_old_[i].data(); //At time t
         // NB: This method is very nearly as fast as using a pure pointer array (ie. native C++). The data() method seems to have very little overhead as expected
@@ -106,7 +113,7 @@ int RK2CN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
             for (int k=0; k<size_Ckl_; ++k) {
                 denom = 1/(1-dt_tmp/2*(data_linopC[k]+data_linopC[j]));
                 // Column/Row major order makes no difference here
-                dataC_rhs[k+size_Ckl_*j]=(1+dt_tmp/2*(data_linopC_old[k]+data_linopC_old[j]))
+                dataC_th2[k+size_Ckl_*j]=(1+dt_tmp/2*(data_linopC_old[k]+data_linopC_old[j]))
                         *denom*dataC[k+size_Ckl_*j]  +
                     dt_tmp*denom*dataC_rhs[k+size_Ckl_*j];
             }
@@ -114,14 +121,14 @@ int RK2CN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
     }
     
     for (int i=0; i<num_MF_; i++) {
-        MF_rhs_[i] = linop_MF_NLCo_dto2_[i]*MF_rhs_[i] + linop_MF_linCo_dto2_[i]*MF[i];
+        MF_th2_[i] = linop_MF_NLCo_dto2_[i]*MF_rhs_[i] + linop_MF_linCo_dto2_[i]*MF[i];
     }
     
     
     //////////////////////////////////////////////////////////
     //                  SECOND STEP                          //
     dt_tmp = dt_;
-    model_.rhs(t+dt_/2, dt_/2, MF_rhs_, Ckl_rhs_, MF_rhs_, Ckl_rhs_,linop_Ckl_);
+    model_.rhs(t+dt_/2, dt_/2, MF_th2_, Ckl_th2_, MF_rhs_, Ckl_rhs_,linop_Ckl_);
     
     // NOTE data_linopC_old is still at t
     for (int i=0; i<dim_Ckl_array_; i++) {

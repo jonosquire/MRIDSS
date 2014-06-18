@@ -55,10 +55,12 @@ public:
     bool QuasiLinearQ;
     
     // Time variables to save
-    bool energy_save_Q_;
-    bool AM_save_Q_;
-    bool dissipation_save_Q_;
-    bool mean_field_save_Q_;
+    bool energy_save_Q;
+    bool AM_save_Q;
+    bool dissipation_save_Q;
+    bool reynolds_save_Q;
+    bool mean_field_save_Q;
+    
     
     ///////////////////////////////////////////////
 

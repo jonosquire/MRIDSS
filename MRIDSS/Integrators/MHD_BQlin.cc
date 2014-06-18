@@ -84,12 +84,14 @@ fft_(fft) // FFT data
     Qkl_tmp_ = doubVec( nz_Cfull_ );
     
     // A operator matrix - lots of submatrices
+    dcmplxVec Aop_v11_, Aop_v12_, Aop_v21_, Aop_v43_;
+    dcmplxMat Aop_m13_, Aop_m14_, Aop_m23_, Aop_m24_, Aop_m31_, Aop_m41_, Aop_m42_;
     // Zero - A22 A32 A33 A34 A44
     // Vectors
-    Aop_v11_ = dcmplxVecM(NZ_);
-    Aop_v12_ = dcmplxVecM(NZ_);
-    Aop_v21_ = dcmplxVecM(NZ_);
-    Aop_v43_ = dcmplxVecM(NZ_);
+    Aop_v11_ = dcmplxVec(NZ_);
+    Aop_v12_ = dcmplxVec(NZ_);
+    Aop_v21_ = dcmplxVec(NZ_);
+    Aop_v43_ = dcmplxVec(NZ_);
     // Matrices
     Aop_m13_= dcmplxMat(NZ_,NZ_);
     Aop_m14_= dcmplxMat(NZ_,NZ_);
@@ -99,14 +101,6 @@ fft_(fft) // FFT data
     Aop_m41_= dcmplxMat(NZ_,NZ_);
     Aop_m42_= dcmplxMat(NZ_,NZ_);
     Aop_block_tmp_= dcmplxMat(NZ_,NZ_); // Useful temporary
-    
-
-    // Ckl submatrices
-    C1_= dcmplxMat(NZ_,NZ_);
-    C2_= dcmplxMat(NZ_,NZ_);
-    C3_= dcmplxMat(NZ_,NZ_);
-    C4_= dcmplxMat(NZ_,NZ_);
-
 
     
     // Real versions of B
@@ -117,10 +111,10 @@ fft_(fft) // FFT data
     // Reynolds stresses
     reynolds_mat_tmp_ = dcmplxMat(NZ_,NZ_);
     // converting between u, zeta... and u, uy... for the Reynolds stresses
-    rey_mkxky_tmp_ = dcmplxVecM( NZ_ );
-    rey_kz_tmp_ = dcmplxVecM( NZ_ );
-    rey_mkxkz_tmp_ = dcmplxVecM( NZ_ );
-    rey_mky_tmp_ = dcmplxVecM( NZ_ );
+    rey_mkxky_tmp_ = Eigen::Matrix<dcmplx, Eigen::Dynamic, 1>( NZ_ );
+    rey_kz_tmp_ = Eigen::Matrix<dcmplx, Eigen::Dynamic, 1>( NZ_ );
+    rey_mkxkz_tmp_ = Eigen::Matrix<dcmplx, Eigen::Dynamic, 1>( NZ_ );
+    rey_mky_tmp_ = Eigen::Matrix<dcmplx, Eigen::Dynamic, 1>( NZ_ );
 
 }
 
@@ -215,11 +209,11 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         
         // u u Component
         // -2*q*ilapF*kxt*ky
-        Aop_v11_= ((-2*q_*kxctmp_*kyctmp_)*ilapFtmp_.cast<dcmplx>()).matrix();
+        Aop_v11_= ((-2*q_*kxctmp_*kyctmp_)*ilapFtmp_.cast<dcmplx>()).matrix().asDiagonal();
         
         // u zeta Component
         // 2*ilapF.*K.kz
-        Aop_v12_ = (2*ilapFtmp_*kz_).matrix();
+        Aop_v12_ = (2*ilapFtmp_*kz_).matrix().asDiagonal();
         
         // u b Component
         // dealiasmat.*( fft(ky*realB.*idft) + 2*kxt^2*ky*ilapF*fft(realDzB.*rilap2kz) )
@@ -248,7 +242,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         
         // zeta u
         // (q-2)*K.kz
-        Aop_v21_ = ((q_-2.0)*kz_).matrix();
+        Aop_v21_ = ((q_-2.0)*kz_).matrix().asDiagonal();
         
         // zeta zeta
         // 0
@@ -312,16 +306,15 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         
         // eta b
         // -q*K.kz
-        Aop_v43_ = ((-q_)*kz_).matrix();
+        Aop_v43_ = ((-q_)*kz_).matrix().asDiagonal();
         
         // eta eta
         // 0
         
         //                                    //
         ////////////////////////////////////////
-        
-        
 
+    
     if (QL_YN_) {
         ///////////////////////////////////////////////////////////
         //////                                               //////
@@ -399,21 +392,14 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         
         // With the block method of matrix multiplication I can no longer use Ckl_out = Ckl_in
         // to save memory in the integrator!
-        // This may be very slightly slower, but it was probably a bad idea anyway, given how easy it was to make a mistake with such a method
+        
         
         // A*C matrix product - rather complicated due to all the submatrices
         
-        // Block_Matrix_Mult_ updates each given of Ckl_out
-        Block_Matrix_Mult_(0, Ckl_in[i], Ckl_out[i]);//COLUMN 0
-        Block_Matrix_Mult_(1, Ckl_in[i], Ckl_out[i]);//COLUMN 1
-        Block_Matrix_Mult_(2, Ckl_in[i], Ckl_out[i]);//COLUMN 2
-        Block_Matrix_Mult_(3, Ckl_in[i], Ckl_out[i]);//COLUMN 3
         
-        // Add to adjoint
-        Ckl_out[i] += Ckl_out[i].adjoint().eval();
-
-        // Add driving noise
-        Ckl_out[i] += Qkl_tmp_.cast<dcmplx>().matrix().asDiagonal();
+//        Ckl_out[i] += Ckl_out[i].adjoint().eval(); // Nearly 2* faster than above version
+//        Ckl_out[i] += Qkl_tmp_.cast<dcmplx>().matrix().asDiagonal();
+        Ckl_out[i].setZero();
         
         //        // PRINTING FOR DEBUG
         //        for (int i=0; i<Cdimz(); ++i) {
@@ -539,39 +525,6 @@ void MHD_BQlin::dealias(dcmplxVec& vec) {
         vec(j) = 0;
     }
 }
-//////////////////////////////////////////////////////////
-
-
-
-
-
-//////////////////////////////////////////////////////
-//    BLOCK MATRIX MULTIPLICATION                   //
-
-void MHD_BQlin::Block_Matrix_Mult_(int column, dcmplxMat& Ckl_in_i, dcmplxMat& Ckl_out_i) {
-    // Update a column of Ckl_out in a block matrix multiplication
-    // column is the desired column
-    // Ckl_in/out is reference to Ckl_in/out
-    // Rest of the bits are members of the class
-    // NB: Best as a column since it is A*C not C*A
-    C1_ = Ckl_in_i.block( 0,    column*NZ_, NZ_, NZ_);
-    C2_ = Ckl_in_i.block( NZ_,  column*NZ_, NZ_, NZ_);
-    C3_ = Ckl_in_i.block( 2*NZ_,column*NZ_, NZ_, NZ_);
-    C4_ = Ckl_in_i.block( 3*NZ_,column*NZ_, NZ_, NZ_);
-    // Product
-    Ckl_out_i.block( 0,     column*NZ_, NZ_, NZ_) =
-    Aop_v11_.asDiagonal()*C1_+Aop_v12_.asDiagonal()*C2_+Aop_m13_*C3_+Aop_m14_*C4_;
-    Ckl_out_i.block( NZ_,   column*NZ_, NZ_, NZ_) =
-    Aop_v21_.asDiagonal()*C1_+Aop_m23_*C3_+Aop_m24_*C4_;
-    Ckl_out_i.block( 2*NZ_, column*NZ_,  NZ_, NZ_) = Aop_m31_*C1_;
-    Ckl_out_i.block( 3*NZ_, column*NZ_, NZ_, NZ_) =
-    Aop_m41_*C1_+Aop_m42_*C2_+Aop_v43_.asDiagonal()*C3_;
-}
-
-
-
-
-
 
 
 //////////////////////////////////////////////////////////
@@ -588,12 +541,8 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
     // OUTPUT: energy[1] and [2] contain U and B mean field energies (energy[1]=0 for this)
     // energy[3] and [4] contain u and b fluctuating energies.
     
-    // Energy
     double energy_u=0, energy_b=0;
     double energy_u_f=0, energy_b_f=0; // Receive buffer for MPI_Reduce
-    // Angular momentum
-    double AM_u = 0, AM_b = 0;
-    double AM_u_f=0, AM_b_f=0; // Receive buffer for MPI_Reduce
 
     int mult_fac;// Factor to account for only doing half fft sum.
     /////////////////////////////////////
@@ -603,11 +552,8 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
         int k_i = i + index_for_k_array(); // k index
         int ind_ky = ky_index_[k_i];
         // Form Laplacians using time-dependent kx
-        kyctmp_ = ky_[k_i];
-        kytmp_ = kyctmp_.imag(); // It is useful to have both complex and double versions
-        kxctmp_ = kx_[k_i] + q_*t*kyctmp_;
-        kxtmp_ = kxctmp_.imag();
-        
+        kytmp_=ky_[k_i].imag();
+        kxtmp_=kx_[k_i].imag() + q_*t*kytmp_;
         ilap2tmp_ = ilap2_[ind_ky];
         lapFtmp_ = -kxtmp_*kxtmp_ + lap2_[ind_ky];
         
@@ -615,52 +561,28 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
         if (kytmp_== 0.0 )
             mult_fac = 1; // Only count ky=0 mode once
 
-        if (tv.energy_save_Q()){
-            //////////////////////////////////////
-            //     ENERGY
-            // Use Qkl_tmp_ for Mkl to save memory
-            lapFtmp_ = lapFtmp_*ilap2tmp_;
-            Qkl_tmp_ << lapFtmp_, -ilap2tmp_,lapFtmp_, -ilap2tmp_;
-            
-            // Energy = trace(Mkl*Ckl), Mkl is diagonal
-            Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
-            
-            int num_u_b = num_fluct_/2; // Keep it clear where numbers are coming from.
-            energy_u += Qkl_tmp_.head(NZ_*num_u_b).sum();
-            energy_b += Qkl_tmp_.tail(NZ_*num_u_b).sum();
-            //
-            //////////////////////////////////////
-        }
-        if (tv.AngMom_save_Q()){
-            //////////////////////////////////////
-            //   Angular momentum
-            
-            // These are Eigen matrices instead, just for asDiagonal
-            rey_mkxky_tmp_ = (-kyctmp_*kxctmp_ )*ilap2tmp_.cast<dcmplx>().matrix();
-            rey_kz_tmp_ = (kz_*ilap2tmp_).matrix();
-            
-            // uy*ux - steal Reynolds stress variable for this
-            bzux_m_uzbx_d_ = (rey_mkxky_tmp_.array()*Cin[i].block( 0, 0, NZ_, NZ_).diagonal().array()).real() + (rey_kz_tmp_.array()*Cin[i].block(NZ_, 0,NZ_, NZ_).diagonal().array()).real();
-            AM_u += mult_fac*bzux_m_uzbx_d_.sum();
-            // by*bx - steal Reynolds stress variable for this
-            bzux_m_uzbx_d_ = (rey_mkxky_tmp_.array()*Cin[i].block( 2*NZ_,2*NZ_, NZ_, NZ_).diagonal().array()).real() +   (rey_kz_tmp_.array()*Cin[i].block(3*NZ_, 2*NZ_,NZ_, NZ_).diagonal().array()).real();
-            AM_b += mult_fac*bzux_m_uzbx_d_.sum();
-            //
-            //////////////////////////////////////
-        }
+        // Use Qkl_tmp_ for Mkl to save memory
+        lapFtmp_ = lapFtmp_*ilap2tmp_;
+        Qkl_tmp_ << lapFtmp_, -ilap2tmp_,lapFtmp_, -ilap2tmp_;
+
+        
+                // Energy = trace(Mkl*Ckl), Mkl is diagonal
+        Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
         
         
+//        std::cout << "kx = " << kx_[i] << ", ky = " <<ky_[i] << std::endl;
+//        std::cout << Qkl_tmp_.sum() << std::endl;
+        int num_u_b = num_fluct_/2; // Keep it clear where numbers are coming from.
+        energy_u += Qkl_tmp_.head(NZ_*num_u_b).sum();
+        energy_b += Qkl_tmp_.tail(NZ_*num_u_b).sum();
+        
+//        std::cout << Qkl_tmp_ << std::endl;
+//        std::cout << "a" << std::endl;
+
     }
-    if (tv.energy_save_Q()){
-        // Put the energy on processor 0
-        mpi_.SumReduce_doub(&energy_u,&energy_u_f,1);
-        mpi_.SumReduce_doub(&energy_b,&energy_b_f,1);
-    }
-    if (tv.AngMom_save_Q()){
-        // Put the angular momentum on processor 0
-        mpi_.SumReduce_doub(&AM_u,&AM_u_f,1);
-        mpi_.SumReduce_doub(&AM_b,&AM_b_f,1);
-    }
+    // Put the energy on processor 0
+    mpi_.SumReduce_doub(&energy_u,&energy_u_f,1);
+    mpi_.SumReduce_doub(&energy_b,&energy_b_f,1);
 //    energy_u_f = energy_u; energy_b_f = energy_b;   // If in-place version is desired
 //    mpi_.SumReduce_IP_doub(&energy_u_f,1);
 //    mpi_.SumReduce_IP_doub(&energy_b_f,1);
@@ -669,52 +591,25 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
         ////////////////////////////////////////////
         ///// All this is only on processor 0  /////
         double divfac=1.0/(Nxy_[0]*Nxy_[1]*2*NZ_);
-        divfac = divfac*divfac;
-        energy_u_f = energy_u_f*divfac;
-        energy_b_f = energy_b_f*divfac;
-        AM_u_f = AM_u_f*divfac;
-        AM_b_f = AM_b_f*divfac;
+        energy_u_f = energy_u_f*divfac*divfac;
+        energy_b_f = energy_b_f*divfac*divfac;
         
         
         ///////////////////////////////////////
         ///       MEAN FIELDS            //////
         // Only need to calculate on one processor
         double energy_MU=0, energy_MB=0;
-        double AM_MU =0, AM_MB=0;
         
         energy_MB = (MFin[0].abs2().sum() + MFin[1].abs2().sum())/(NZ_*NZ_);
-        AM_MB = (MFin[0]*MFin[1].conjugate()).real().sum()/(NZ_*NZ_);
         
         ///////////////////////////////////////
         //////         OUTPUT            //////
-        
-        // Energy
         double* en_point = tv.current_energy();
         en_point[0] = energy_MU/2;
         en_point[1] = energy_MB/2;
         en_point[2] = energy_u_f/2;
         en_point[3] = energy_b_f/2;
         
-        // Angular momentum
-        double* AM_point = tv.current_AM();
-        AM_point[0] = AM_MU/2;
-        AM_point[1] = AM_MB/2;
-        AM_point[2] = AM_u_f/2;
-        AM_point[3] = AM_b_f/2;
-        
-        
-        
-        if (tv.reynolds_save_Q()) {
-            //////////////////////////////////////
-            //   Reynolds stress
-            // Just save the previously assigned Reynolds stress to compare By with Bx stress
-            double* rey_point = tv.current_reynolds();
-            rey_point[0] = bzux_m_uzbx_drec_.abs2().sum();
-            rey_point[1] = bzuy_m_uzby_drec_.abs2().sum();
-            //
-            //////////////////////////////////////
-        }
-
         ///// All this is only on processor 0  /////
         ////////////////////////////////////////////
     }
@@ -723,7 +618,6 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
     tv.increase_savenum();
     
 }
-
 
 
 

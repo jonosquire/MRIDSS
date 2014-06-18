@@ -35,6 +35,39 @@ void ShearingBox_Remap(Model* mod, dcmplxMat* Ckl){
 
 
 
+//////////////////////////////////////////////////////////
+//              CHECK SOLUTION IS OK                    //
+void CheckSolution(dcmplxVec* MF, dcmplxMat* Ckl){
+    // FRIEND TO THE MODEL CLASS
+    // Checks important aspects of solution e.g., hasn't gotten too large
+    
+    // Mean field is real
+    if (MF[1].real().abs().sum()/MF[1].imag().abs().sum() < 1e10 ){
+        std::cout << "<<<<<<<<<<<<<<>>>>>>>>>>>>>>" << std::endl;
+        std::cout << "ERROR: Mean field has developed an imaginary part!!" << std::endl;
+        std::cout << "<<<<<<<<<<<<<<>>>>>>>>>>>>>>" << std::endl;
+        ABORT;
+    }
+    
+    // Stability
+    if (MF[1].abs().maxCoeff()>1e20 || MF[0].abs().maxCoeff()>1e20) {
+        std::cout << "<<<<<<<<<<<<<<>>>>>>>>>>>>>>" << std::endl;
+        std::cout << "ERROR: Solution is very large, probably unstable!!" << std::endl;
+        std::cout << "<<<<<<<<<<<<<<>>>>>>>>>>>>>>" << std::endl;
+        ABORT;
+    }
+    if (!std::isfinite(MF[1].abs().sum()) || !std::isfinite(MF[1].abs().sum())) {
+        std::cout << "<<<<<<<<<<<<<<>>>>>>>>>>>>>>" << std::endl;
+        std::cout << "ERROR: Solution contains NaN or Inf!!" << std::endl;
+        std::cout << "<<<<<<<<<<<<<<>>>>>>>>>>>>>>" << std::endl;
+        ABORT;
+    }
+    
+}
+
+//////////////////////////////////////////////////////////
+
+
 /////////////////////////////////////////////////////
 //                                                 //
 //                 fftw_Plans                      //
@@ -143,10 +176,16 @@ fftwPlans::~fftwPlans() {
 int TimeVariables::curr_pos_ = 0;
 
 // Constructor
-TimeVariables::TimeVariables(Inputs SP, int width, int mpinode) :
+TimeVariables::TimeVariables(Inputs SP, int width, int numMF, int mpinode) :
 nsteps_(SP.nsteps/SP.timevar_save_nsteps + 1), width_(width), mpi_node_(mpinode),
-simulation_dir_(SP.simulation_dir), MFlen_(0)
+simulation_dir_(SP.simulation_dir), MFlen_(0), numMF_(numMF),
+en_save_Q_(SP.energy_save_Q), AM_save_Q_(SP.AM_save_Q), diss_save_Q_(SP.dissipation_save_Q),
+rey_save_Q_(SP.reynolds_save_Q),
+MF_save_Q_(SP.mean_field_save_Q)
 {
+    ////////////////////////////////
+    //    THIS NEEDS TIDYING!!!!!!!!
+    
     // Main variables
     // Store only on 1-processor - presumbably this is better
     // TODO: Only allocate necessary memory?
@@ -154,10 +193,12 @@ simulation_dir_(SP.simulation_dir), MFlen_(0)
         energy_ = new double*[nsteps_];
         angular_momentum_ = new double*[nsteps_];
         dissipation_ = new double*[nsteps_];
+        reynolds_ = new double*[nsteps_];
         for (int i=0; i<nsteps_; ++i) {
             energy_[i] = new double[width_];
             angular_momentum_[i] = new double[width_];
             dissipation_[i] = new double[width_];
+            reynolds_[i] = new double[numMF_];
         }
     }
     
@@ -165,30 +206,39 @@ simulation_dir_(SP.simulation_dir), MFlen_(0)
     fname_energy_ = simulation_dir_ + "energy.dat";
     fname_angular_momentum_ = simulation_dir_ + "angular_momentum.dat";
     fname_dissipation_ = simulation_dir_ + "dissipation.dat";
+    // Reynolds stress
+    fname_reynolds_ = simulation_dir_ + "reynolds_stress.dat";
     // Mean fields
     fname_mean_fields_ = simulation_dir_ + "mean_fields.dat";
     
     if (mpi_node_ == 0) {
-        if (SP.energy_save_Q_) {
+        if (en_save_Q_) {
             fileS_energy_.open(fname_energy_.c_str(), std::ios::binary);
             if (!fileS_energy_.is_open() ) {
                 std::cout << "WARNING: " << fname_energy_ <<  " file unable to be opened" << std::endl;
             }
         }
-        if (SP.AM_save_Q_) {
+        if (AM_save_Q_) {
             fileS_angular_momentum_.open(fname_angular_momentum_.c_str(), std::ios::binary);
             if (!fileS_angular_momentum_.is_open() ) {
                 std::cout << "WARNING: " << fname_angular_momentum_ <<  " file unable to be opened" << std::endl;
             }
         }
-        if (SP.dissipation_save_Q_) {
+        if (diss_save_Q_) {
             fileS_dissipation_.open(fname_dissipation_.c_str(), std::ios::binary);
             if (!fileS_dissipation_.is_open() ) {
                 std::cout << "WARNING: " << fname_dissipation_ <<  " file unable to be opened" << std::endl;
             }
         }
+        // Reynolds stress
+        if (rey_save_Q_) {
+            fileS_reynolds_.open(fname_reynolds_.c_str(), std::ios::binary);
+            if (!fileS_reynolds_.is_open() ) {
+                std::cout << "WARNING: " << fname_reynolds_ <<  " file unable to be opened" << std::endl;
+            }
+        }
         // Mean fields
-        if (SP.mean_field_save_Q_) {
+        if (MF_save_Q_) {
             fileS_mean_fields_.open(fname_mean_fields_.c_str(), std::ios::binary);
             if (!fileS_mean_fields_.is_open() ) {
                 std::cout << "WARNING: " << fname_mean_fields_ <<  " file unable to be opened" << std::endl;
@@ -222,15 +272,18 @@ TimeVariables::~TimeVariables() {
             delete[] energy_[i];
             delete[] angular_momentum_[i];
             delete[] dissipation_[i];
+            delete[] reynolds_[i];
         }
     }
     delete[] energy_;
     delete[] angular_momentum_;
     delete[] dissipation_;
+    delete[] reynolds_;
     
     fileS_energy_.close();
     fileS_angular_momentum_.close();
     fileS_dissipation_.close();
+    fileS_reynolds_.close();
     fileS_mean_fields_.close();
     
 }
@@ -261,13 +314,21 @@ void TimeVariables::Save_Data(){
         }
         // Read into matlab as a double (4*nsteps) array
     }
+    if (fileS_reynolds_.is_open()) {
+        // Must write each individually since don't know that it is continuous in memory
+        for (int i=0; i<nsteps_; ++i) {
+            fileS_reynolds_.write( (char*) reynolds_[i], sizeof(reynolds_)*numMF_);
+        }
+        // Read into matlab as a double (4*nsteps) array
+    }
+
 
     
 }
 
 
 // Save Mean field data
-void TimeVariables::Save_Mean_Fields(dcmplxVec *MF, int numMF, fftwPlans& fft){
+void TimeVariables::Save_Mean_Fields(dcmplxVec *MF, fftwPlans& fft){
     // Could certainly be improved - just dumps the data into fname_mean_fields
     
     // IN MATLAB
@@ -284,7 +345,7 @@ void TimeVariables::Save_Mean_Fields(dcmplxVec *MF, int numMF, fftwPlans& fft){
         }
         
         // Save each MF variable sequentially
-        for (int i=0; i<numMF; ++i) {
+        for (int i=0; i<numMF_; ++i) {
             // Take fft - could be done faster with c_to_r fft
             MFdata_c_ = MF[i];
             fft.back_1D(MFdata_c_.data());

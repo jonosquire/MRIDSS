@@ -32,18 +32,18 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, int numMF, int NXY, MPIda
 //    auto normal_dist = std::bind ( distribution, generator ); // Asign simple call
     
     
-//    /////////////////////////////////
-//    //      EVERYTHING ZERO        //
-//    
+    /////////////////////////////////
+    //      EVERYTHING ZERO        //
+    
     // Assign to all entries of Ckl
-//    int nz = Ckl[0].rows();
-//    for (int i=0; i<NXY; ++i) {
-//        for (int j=0; j<nz; ++j) {
-//            for (int k=0; k<nz; ++k)
-//                Ckl[i](j,k)=dcmplx(0,0);
-//        }
-//    }
-//
+    int nz = Ckl[0].rows();
+    for (int i=0; i<NXY; ++i) {
+        for (int j=0; j<nz; ++j) {
+            for (int k=0; k<nz; ++k)
+                Ckl[i](j,k)=dcmplx(0,0);
+        }
+    }
+
 //    // Assign to mean fields
 //    for (int i=0; i<numMF; ++i) {
 //        for (int j=0; j<nz/4; ++j) {
@@ -53,44 +53,44 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, int numMF, int NXY, MPIda
 //    //                             //
 //    /////////////////////////////////
     
-    /////////////////////////////////
-    //   LOAD FROM (MATLAB) FILE   //
-    
-    // DOES NOT WORK WITH MPI - NEED TO UPGRADE
-    std::string init_filename("/Users/jsquire/Documents/MRIDSS/MRIDSS/Data/SW_test/initial_conditions.dat");
-    std::ifstream init_file(init_filename, std::ios::in | std::ios::binary);
-    if (init_file.is_open()){
-        // Read into Ckl
-        long nzf = Ckl[0].rows();
-        double *realbuf = new double[nzf*nzf];
-        double *imagbuf = new double[nzf*nzf];
-        for (int i=0; i<NXY; ++i) {
-            init_file.read((char*)realbuf, sizeof(realbuf)*nzf*nzf);
-            init_file.read((char*)imagbuf, sizeof(imagbuf)*nzf*nzf);
-            
-            dcmplx* Cp = Ckl[i].data();
-            for (int i=0; i<nzf*nzf; i++) {
-                Cp[i] = dcmplx(realbuf[i],imagbuf[i]);
-            }
-//            std::cout << Ckl[i] << std::endl;
-//            std::cout << std::endl;
-
-        }
-        init_file.close();
-        // End if
-        delete[] realbuf;
-        delete[] imagbuf;
-    }
-    else {
-        std::cout << "ERROR: Initial condition failed to open" << std::endl;
-    }
+//    /////////////////////////////////
+//    //   LOAD FROM (MATLAB) FILE   //
+//    
+//    // DOES NOT WORK WITH MPI - NEED TO UPGRADE
+//    std::string init_filename("/Users/jsquire/Documents/MRIDSS/MRIDSS/Data/SW_test/initial_conditions.dat");
+//    std::ifstream init_file(init_filename, std::ios::in | std::ios::binary);
+//    if (init_file.is_open()){
+//        // Read into Ckl
+//        long nzf = Ckl[0].rows();
+//        double *realbuf = new double[nzf*nzf];
+//        double *imagbuf = new double[nzf*nzf];
+//        for (int i=0; i<NXY; ++i) {
+//            init_file.read((char*)realbuf, sizeof(realbuf)*nzf*nzf);
+//            init_file.read((char*)imagbuf, sizeof(imagbuf)*nzf*nzf);
+//            
+//            dcmplx* Cp = Ckl[i].data();
+//            for (int i=0; i<nzf*nzf; i++) {
+//                Cp[i] = dcmplx(realbuf[i],imagbuf[i]);
+//            }
+////            std::cout << Ckl[i] << std::endl;
+////            std::cout << std::endl;
+//
+//        }
+//        init_file.close();
+//        // End if
+//        delete[] realbuf;
+//        delete[] imagbuf;
+//    }
+//    else {
+//        std::cout << "ERROR: Initial condition failed to open" << std::endl;
+//    }
 
     // Assign to mean fields
     // THIS ASSUMES LZ=2pi
     doubVec zg = doubVec::LinSpaced( MF[0].size(), 0, 2*PI*(1.0-1.0/MF[0].size()) );
     MF[0].setZero();
     for (int i=0; i<MF[0].size(); ++i) {
-        MF[1](i) = (dcmplx) 0.5*cos( zg(i) );
+        MF[1](i) = (dcmplx) 0.00001*cos( zg(i) );
     }
 //    std::cout <<MF[1] << std::endl;
 

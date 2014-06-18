@@ -1,12 +1,12 @@
 //
-//  MHD_BQlin.cc
+//  MHD_BQlin_old.cc
 //  MRIDSS
 //
 //  Created by Jonathan Squire on 4/25/14.
 //  Copyright (c) 2014 J Squire. All rights reserved.
 //
 
-#include "MHD_BQlin.h"
+#include "MHD_BQlin_old.h"
 
 
 // Model class for S3T/CE2 shearing box MHD model
@@ -15,8 +15,19 @@
 // Derived from Model (model.h)
 
 
-// Constructor for MHD_BQlin
-MHD_BQlin::MHD_BQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) :
+/////////////////////////////////////////////////////
+//
+//   This is an old version of MHD_BQlin where the matrix product
+//   is done in full. In the new version it is done in blocks to
+//   allow asDiagonal and leaving out zero matrices.
+//   This version is somewhat slower, depending on the problem size
+//
+/////////////////////////////////////////////////////
+
+
+
+// Constructor for MHD_BQlin_old
+MHD_BQlin_old::MHD_BQlin_old(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) :
 num_MF_(2), num_fluct_(4),
 q_(sp.q), f_noise_(sp.f_noise), nu_(sp.nu), eta_(sp.eta),
 QL_YN_(sp.QuasiLinearQ),
@@ -83,30 +94,10 @@ fft_(fft) // FFT data
     // Qkl
     Qkl_tmp_ = doubVec( nz_Cfull_ );
     
-    // A operator matrix - lots of submatrices
-    // Zero - A22 A32 A33 A34 A44
-    // Vectors
-    Aop_v11_ = dcmplxVecM(NZ_);
-    Aop_v12_ = dcmplxVecM(NZ_);
-    Aop_v21_ = dcmplxVecM(NZ_);
-    Aop_v43_ = dcmplxVecM(NZ_);
-    // Matrices
-    Aop_m13_= dcmplxMat(NZ_,NZ_);
-    Aop_m14_= dcmplxMat(NZ_,NZ_);
-    Aop_m23_= dcmplxMat(NZ_,NZ_);
-    Aop_m24_= dcmplxMat(NZ_,NZ_);
-    Aop_m31_= dcmplxMat(NZ_,NZ_);
-    Aop_m41_= dcmplxMat(NZ_,NZ_);
-    Aop_m42_= dcmplxMat(NZ_,NZ_);
-    Aop_block_tmp_= dcmplxMat(NZ_,NZ_); // Useful temporary
-    
-
-    // Ckl submatrices
-    C1_= dcmplxMat(NZ_,NZ_);
-    C2_= dcmplxMat(NZ_,NZ_);
-    C3_= dcmplxMat(NZ_,NZ_);
-    C4_= dcmplxMat(NZ_,NZ_);
-
+    // A operator matrix
+    Aop_tmp_= dcmplxMat(nz_Cfull_,nz_Cfull_);
+    Aop_block_tmp_= dcmplxMat(NZ_,NZ_);
+    Aop_block_tmp2_= dcmplxMat(NZ_,NZ_);
 
     
     // Real versions of B
@@ -117,16 +108,16 @@ fft_(fft) // FFT data
     // Reynolds stresses
     reynolds_mat_tmp_ = dcmplxMat(NZ_,NZ_);
     // converting between u, zeta... and u, uy... for the Reynolds stresses
-    rey_mkxky_tmp_ = dcmplxVecM( NZ_ );
-    rey_kz_tmp_ = dcmplxVecM( NZ_ );
-    rey_mkxkz_tmp_ = dcmplxVecM( NZ_ );
-    rey_mky_tmp_ = dcmplxVecM( NZ_ );
+    rey_mkxky_tmp_ = Eigen::Matrix<dcmplx, Eigen::Dynamic, 1>( NZ_ );
+    rey_kz_tmp_ = Eigen::Matrix<dcmplx, Eigen::Dynamic, 1>( NZ_ );
+    rey_mkxkz_tmp_ = Eigen::Matrix<dcmplx, Eigen::Dynamic, 1>( NZ_ );
+    rey_mky_tmp_ = Eigen::Matrix<dcmplx, Eigen::Dynamic, 1>( NZ_ );
 
 }
 
 
 // Destructor
-MHD_BQlin::~MHD_BQlin(){
+MHD_BQlin_old::~MHD_BQlin_old(){
     // Here I am destroying Base members from the derived destructor - is this bad?
     delete[] kx_;
     delete[] ky_;
@@ -143,7 +134,7 @@ MHD_BQlin::~MHD_BQlin(){
 
 
 // Main EulerFluid function, fx = f(t,x) called at ecah time-step
-void MHD_BQlin::rhs(double t, double dt_lin,
+void MHD_BQlin_old::rhs(double t, double dt_lin,
                    dcmplxVec *MFin, dcmplxMat *Ckl_in,
                    dcmplxVec *MFout, dcmplxMat *Ckl_out,
                    doubVec * linop_Ckl) {
@@ -158,6 +149,9 @@ void MHD_BQlin::rhs(double t, double dt_lin,
     fft_.back_1D(rDzBy_tmp_.data());
     rDzzBy_tmp_ = kz2_*MFin[1]*(1.0/NZ_);
     fft_.back_1D(rDzzBy_tmp_.data());
+    
+    // Operator (A) matrix -- to be filled up, reset at each step in the loop
+    Aop_tmp_.setZero();
     
     // Reynolds stresses -- added to at each step in the loop
     bzux_m_uzbx_d_.setZero();
@@ -215,69 +209,74 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         
         // u u Component
         // -2*q*ilapF*kxt*ky
-        Aop_v11_= ((-2*q_*kxctmp_*kyctmp_)*ilapFtmp_.cast<dcmplx>()).matrix();
+        Aop_tmp_.block(0, 0, NZ_, NZ_) += ((-2*q_*kxctmp_*kyctmp_)*ilapFtmp_.cast<dcmplx>()).matrix().asDiagonal();
         
         // u zeta Component
         // 2*ilapF.*K.kz
-        Aop_v12_ = (2*ilapFtmp_*kz_).matrix();
+        Aop_tmp_.block(0, NZ_, NZ_, NZ_) += (2*ilapFtmp_*kz_).matrix().asDiagonal();
         
         // u b Component
         // dealiasmat.*( fft(ky*realB.*idft) + 2*kxt^2*ky*ilapF*fft(realDzB.*rilap2kz) )
-        Aop_m13_ = (fft_identity_.array().colwise()*(kyctmp_*rBy_tmp_)).matrix();
-        fft_.for_2D_dim1(Aop_m13_.data());
-        Aop_block_tmp_ = (fft_kzilap2_[ind_ky].array().colwise()*rDzBy_tmp_).matrix();
+        Aop_block_tmp_ = (fft_identity_.array().colwise()*(kyctmp_*rBy_tmp_)).matrix();
         fft_.for_2D_dim1(Aop_block_tmp_.data());
-        Aop_m13_ +=
+        Aop_block_tmp2_ = (fft_kzilap2_[ind_ky].array().colwise()*rDzBy_tmp_).matrix();
+        fft_.for_2D_dim1(Aop_block_tmp2_.data());
+        Aop_block_tmp_ +=
             ((2.0*kxctmp_*kxctmp_*kyctmp_)*ilapFtmp_.cast<dcmplx>()).matrix().asDiagonal()*
-                Aop_block_tmp_;
-        dealias(Aop_m13_.data()); // Could also do delaliasing in assignment
-        // Final assignment done
+                Aop_block_tmp2_;
+        dealias(Aop_block_tmp_.data()); // Could also do delaliasing in assignment
+        // Final assignment
+        Aop_tmp_.block(0, 2*NZ_, NZ_, NZ_) = Aop_block_tmp_;
         
         // u eta component
         // dealiasmat.*( 2*kxt*ky^2*ilapF*fft( realDzB.*rilap2 )  )
-        Aop_m14_ = (fft_ilap2_[ind_ky].array().colwise()*rDzBy_tmp_).matrix();
-        fft_.for_2D_dim1(Aop_m14_.data());
-        Aop_m14_ =
+        Aop_block_tmp_ = (fft_ilap2_[ind_ky].array().colwise()*rDzBy_tmp_).matrix();
+        fft_.for_2D_dim1(Aop_block_tmp_.data());
+        Aop_block_tmp_ =
             ((2.0*kxctmp_*kyctmp_*kyctmp_)*ilapFtmp_.cast<dcmplx>()).matrix().asDiagonal()*
-                Aop_m14_;
-        dealias(Aop_m14_.data());
-        // Final assignment done
+                Aop_block_tmp_;
+        dealias(Aop_block_tmp_.data());
+        // Final assignment
+        Aop_tmp_.block(0, 3*NZ_, NZ_, NZ_) = Aop_block_tmp_;
         
         
         // ROW 2
         
         // zeta u
         // (q-2)*K.kz
-        Aop_v21_ = ((q_-2.0)*kz_).matrix();
+        Aop_tmp_.block(NZ_, 0, NZ_, NZ_) += ((q_-2.0)*kz_).matrix().asDiagonal();
         
         // zeta zeta
         // 0
         
         // zeta b
         // dealiasmat.*( fft(-kxt*realDzzB.*rilap2kz-kxt*realDzB.*idft) )
-        Aop_m23_ = (  fft_kzilap2_[ind_ky].array().colwise()*((-kxctmp_)*rDzzBy_tmp_) +
+        Aop_block_tmp_ = (  fft_kzilap2_[ind_ky].array().colwise()*((-kxctmp_)*rDzzBy_tmp_) +
             fft_identity_.array().colwise()*(-kxctmp_*rDzBy_tmp_)  ).matrix();
-        fft_.for_2D_dim1(Aop_m23_.data());
-        dealias(Aop_m23_.data());
-        // Final assignment done
+        fft_.for_2D_dim1(Aop_block_tmp_.data());
+        dealias(Aop_block_tmp_.data());
+        // Final assignment
+        Aop_tmp_.block(NZ_, 2*NZ_, NZ_, NZ_) = Aop_block_tmp_;
         
         // zeta eta
         // dealiasmat.*( fft( ky*realB.*idft - ky*realDzzB.*rilap2 ))
-        Aop_m24_ = (  fft_ilap2_[ind_ky].array().colwise()*((-kyctmp_)*rDzzBy_tmp_) +
+        Aop_block_tmp_ = (  fft_ilap2_[ind_ky].array().colwise()*((-kyctmp_)*rDzzBy_tmp_) +
             fft_identity_.array().colwise()*(kyctmp_*rBy_tmp_)  ).matrix();
-        fft_.for_2D_dim1(Aop_m24_.data());
-        dealias(Aop_m24_.data());
-        // Final assignment done
+        fft_.for_2D_dim1(Aop_block_tmp_.data());
+        dealias(Aop_block_tmp_.data());
+        // Final assignment
+        Aop_tmp_.block(NZ_, 3*NZ_, NZ_, NZ_) = Aop_block_tmp_;
 
         
         // ROW 3
 
         // b u
         // dealiasmat.*( fft(ky*realB.*idft) )
-        Aop_m31_ = (  fft_identity_.array().colwise()*(kyctmp_*rBy_tmp_)  ).matrix();
-        fft_.for_2D_dim1(Aop_m31_.data());
-        dealias(Aop_m31_.data());
-        // Final assignment done
+        Aop_block_tmp_ = (  fft_identity_.array().colwise()*(kyctmp_*rBy_tmp_)  ).matrix();
+        fft_.for_2D_dim1(Aop_block_tmp_.data());
+        dealias(Aop_block_tmp_.data());
+        // Final assignment
+        Aop_tmp_.block(2*NZ_, 0, NZ_, NZ_) = Aop_block_tmp_;
         
         // b zeta
         // 0
@@ -293,35 +292,38 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         
         // eta u
         // dealiasmat.*(fft( 2*kxt*realDzB.*ifft(ilap2.*K.kz.^2) + kxt*realDzzB.*rilap2kz - kxt*realDzB.*idft  ))
-        Aop_m41_ =
+        Aop_block_tmp_ =
             (  fft_kz2ilap2_[ind_ky].array().colwise()*((2.0*kxctmp_)*rDzBy_tmp_) +
             fft_kzilap2_[ind_ky].array().colwise()*(kxctmp_*rDzzBy_tmp_)  +
             fft_identity_.array().colwise()*((-kxctmp_)*rDzBy_tmp_)  ).matrix();
-        fft_.for_2D_dim1(Aop_m41_.data());
-        dealias(Aop_m41_.data());
+        fft_.for_2D_dim1(Aop_block_tmp_.data());
+        dealias(Aop_block_tmp_.data());
+        // Final assignment
+        Aop_tmp_.block(3*NZ_, 0, NZ_, NZ_) = Aop_block_tmp_;
+        
         
         // eta zeta
         // dealiasmat.*(fft(  ky*realB.*idft + 2*ky*realDzB.*rilap2kz + ky*realDzzB.*rilap2  ))
-        Aop_m42_ =
+        Aop_block_tmp_ =
             (  fft_ilap2_[ind_ky].array().colwise()*(kyctmp_*rDzzBy_tmp_) +
              fft_kzilap2_[ind_ky].array().colwise()*((2.0*kyctmp_)*rDzBy_tmp_)  +
              fft_identity_.array().colwise()*(kyctmp_*rBy_tmp_)  ).matrix();
-        fft_.for_2D_dim1(Aop_m42_.data());
-        dealias(Aop_m42_.data());
-        
+        fft_.for_2D_dim1(Aop_block_tmp_.data());
+        dealias(Aop_block_tmp_.data());
+        // Final assignment
+        Aop_tmp_.block(3*NZ_, NZ_, NZ_, NZ_) = Aop_block_tmp_;
         
         // eta b
         // -q*K.kz
-        Aop_v43_ = ((-q_)*kz_).matrix();
+        Aop_tmp_.block(3*NZ_, 2*NZ_, NZ_, NZ_) += ((-q_)*kz_).matrix().asDiagonal();
         
         // eta eta
         // 0
         
         //                                    //
         ////////////////////////////////////////
-        
-        
 
+    
     if (QL_YN_) {
         ///////////////////////////////////////////////////////////
         //////                                               //////
@@ -397,23 +399,13 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         
         // Should experiment with putting this before Reynolds stress, may help stability
         
-        // With the block method of matrix multiplication I can no longer use Ckl_out = Ckl_in
-        // to save memory in the integrator!
-        // This may be very slightly slower, but it was probably a bad idea anyway, given how easy it was to make a mistake with such a method
-        
-        // A*C matrix product - rather complicated due to all the submatrices
-        
-        // Block_Matrix_Mult_ updates each given of Ckl_out
-        Block_Matrix_Mult_(0, Ckl_in[i], Ckl_out[i]);//COLUMN 0
-        Block_Matrix_Mult_(1, Ckl_in[i], Ckl_out[i]);//COLUMN 1
-        Block_Matrix_Mult_(2, Ckl_in[i], Ckl_out[i]);//COLUMN 2
-        Block_Matrix_Mult_(3, Ckl_in[i], Ckl_out[i]);//COLUMN 3
-        
-        // Add to adjoint
-        Ckl_out[i] += Ckl_out[i].adjoint().eval();
-
-        // Add driving noise
+        // In some integrators Ckl_out will be the same as Ckl_in.
+        // Because of this, important to multiply at the end, so there is control over which is used
+//        Ckl_out[i] = Aop_tmp_*Ckl_in[i] + Ckl_in[i]*Aop_tmp_.adjoint();
+        Ckl_out[i] = Aop_tmp_*Ckl_in[i];
+        Ckl_out[i] += Ckl_out[i].adjoint().eval(); // Nearly 2* faster than above version
         Ckl_out[i] += Qkl_tmp_.cast<dcmplx>().matrix().asDiagonal();
+        
         
         //        // PRINTING FOR DEBUG
         //        for (int i=0; i<Cdimz(); ++i) {
@@ -428,6 +420,9 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         //        }
         //        std::cout << "kx = " << kxtmp_ << ", ky = " << kytmp_ << std::endl;
         //        std::cout << Aop_tmp_ << std::endl;
+        
+        // Reset Aop_tmp_, should check speed of this...
+        Aop_tmp_.setZero();
         
         ////////////////////////////////////////
         //////   LINEAR PART
@@ -479,6 +474,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
     ////   MEAN FIELDS    ////////////////
     // In some integrators MFout will be the same as MFin.
     // Because of this, important to calculate MFout[1] first, since it depends on MFin[1], and this would be updated otherwise
+    // No longer the case - separate memory now
     MFout[1] = -q_*MFin[0] + bzuy_m_uzby_c_;
     MFout[0] = bzux_m_uzbx_c_;
     
@@ -489,7 +485,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
 //////////////////////////////////////////////////////////
 ///   Initialization of the linear operators        //////
 
-void MHD_BQlin::linearOPs_Init(double t0, doubVec * linop_MF, doubVec * linop_Ckl_old) {
+void MHD_BQlin_old::linearOPs_Init(double t0, doubVec * linop_MF, doubVec * linop_Ckl_old) {
     // Constructs initial (t=0) linear operators, since MF operator is constant this completely defines it for entire integration
     // Mean fields
     if (QL_YN_) {
@@ -519,7 +515,7 @@ void MHD_BQlin::linearOPs_Init(double t0, doubVec * linop_MF, doubVec * linop_Ck
 //////////////////////////////////////////////////////////
 ////                DEALIASING                      //////
 // Applies dealiasing to 2-D matrix of size NZ_ in z Fourier space
-void MHD_BQlin::dealias(dcmplx *arr) {
+void MHD_BQlin_old::dealias(dcmplx *arr) {
     // Could also use Block here, might be faster
     for (int j=delaiasBnds_[0]; j<delaiasBnds_[1]+1; ++j){
         for (int i=0; i<NZ_; ++i) {
@@ -534,44 +530,11 @@ void MHD_BQlin::dealias(dcmplx *arr) {
     }
 }
 //1-D version - takes a dcmplxVec input
-void MHD_BQlin::dealias(dcmplxVec& vec) {
+void MHD_BQlin_old::dealias(dcmplxVec& vec) {
     for (int j=delaiasBnds_[0]; j<delaiasBnds_[1]+1; ++j){
         vec(j) = 0;
     }
 }
-//////////////////////////////////////////////////////////
-
-
-
-
-
-//////////////////////////////////////////////////////
-//    BLOCK MATRIX MULTIPLICATION                   //
-
-void MHD_BQlin::Block_Matrix_Mult_(int column, dcmplxMat& Ckl_in_i, dcmplxMat& Ckl_out_i) {
-    // Update a column of Ckl_out in a block matrix multiplication
-    // column is the desired column
-    // Ckl_in/out is reference to Ckl_in/out
-    // Rest of the bits are members of the class
-    // NB: Best as a column since it is A*C not C*A
-    C1_ = Ckl_in_i.block( 0,    column*NZ_, NZ_, NZ_);
-    C2_ = Ckl_in_i.block( NZ_,  column*NZ_, NZ_, NZ_);
-    C3_ = Ckl_in_i.block( 2*NZ_,column*NZ_, NZ_, NZ_);
-    C4_ = Ckl_in_i.block( 3*NZ_,column*NZ_, NZ_, NZ_);
-    // Product
-    Ckl_out_i.block( 0,     column*NZ_, NZ_, NZ_) =
-    Aop_v11_.asDiagonal()*C1_+Aop_v12_.asDiagonal()*C2_+Aop_m13_*C3_+Aop_m14_*C4_;
-    Ckl_out_i.block( NZ_,   column*NZ_, NZ_, NZ_) =
-    Aop_v21_.asDiagonal()*C1_+Aop_m23_*C3_+Aop_m24_*C4_;
-    Ckl_out_i.block( 2*NZ_, column*NZ_,  NZ_, NZ_) = Aop_m31_*C1_;
-    Ckl_out_i.block( 3*NZ_, column*NZ_, NZ_, NZ_) =
-    Aop_m41_*C1_+Aop_m42_*C2_+Aop_v43_.asDiagonal()*C3_;
-}
-
-
-
-
-
 
 
 //////////////////////////////////////////////////////////
@@ -580,7 +543,7 @@ void MHD_BQlin::Block_Matrix_Mult_(int column, dcmplxMat& Ckl_in_i, dcmplxMat& C
 //////                                              //////
 //////////////////////////////////////////////////////////
 
-void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec *MFin, const dcmplxMat *Cin ) {
+void MHD_BQlin_old::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec *MFin, const dcmplxMat *Cin ) {
     // Energy, angular momentum and dissipation of the solution MFin and Cin
     // TimeVariables class stores info and data about energy, AM etc.
     // t is time
@@ -588,12 +551,8 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
     // OUTPUT: energy[1] and [2] contain U and B mean field energies (energy[1]=0 for this)
     // energy[3] and [4] contain u and b fluctuating energies.
     
-    // Energy
     double energy_u=0, energy_b=0;
     double energy_u_f=0, energy_b_f=0; // Receive buffer for MPI_Reduce
-    // Angular momentum
-    double AM_u = 0, AM_b = 0;
-    double AM_u_f=0, AM_b_f=0; // Receive buffer for MPI_Reduce
 
     int mult_fac;// Factor to account for only doing half fft sum.
     /////////////////////////////////////
@@ -603,11 +562,8 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
         int k_i = i + index_for_k_array(); // k index
         int ind_ky = ky_index_[k_i];
         // Form Laplacians using time-dependent kx
-        kyctmp_ = ky_[k_i];
-        kytmp_ = kyctmp_.imag(); // It is useful to have both complex and double versions
-        kxctmp_ = kx_[k_i] + q_*t*kyctmp_;
-        kxtmp_ = kxctmp_.imag();
-        
+        kytmp_=ky_[k_i].imag();
+        kxtmp_=kx_[k_i].imag() + q_*t*kytmp_;
         ilap2tmp_ = ilap2_[ind_ky];
         lapFtmp_ = -kxtmp_*kxtmp_ + lap2_[ind_ky];
         
@@ -615,52 +571,28 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
         if (kytmp_== 0.0 )
             mult_fac = 1; // Only count ky=0 mode once
 
-        if (tv.energy_save_Q()){
-            //////////////////////////////////////
-            //     ENERGY
-            // Use Qkl_tmp_ for Mkl to save memory
-            lapFtmp_ = lapFtmp_*ilap2tmp_;
-            Qkl_tmp_ << lapFtmp_, -ilap2tmp_,lapFtmp_, -ilap2tmp_;
-            
-            // Energy = trace(Mkl*Ckl), Mkl is diagonal
-            Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
-            
-            int num_u_b = num_fluct_/2; // Keep it clear where numbers are coming from.
-            energy_u += Qkl_tmp_.head(NZ_*num_u_b).sum();
-            energy_b += Qkl_tmp_.tail(NZ_*num_u_b).sum();
-            //
-            //////////////////////////////////////
-        }
-        if (tv.AngMom_save_Q()){
-            //////////////////////////////////////
-            //   Angular momentum
-            
-            // These are Eigen matrices instead, just for asDiagonal
-            rey_mkxky_tmp_ = (-kyctmp_*kxctmp_ )*ilap2tmp_.cast<dcmplx>().matrix();
-            rey_kz_tmp_ = (kz_*ilap2tmp_).matrix();
-            
-            // uy*ux - steal Reynolds stress variable for this
-            bzux_m_uzbx_d_ = (rey_mkxky_tmp_.array()*Cin[i].block( 0, 0, NZ_, NZ_).diagonal().array()).real() + (rey_kz_tmp_.array()*Cin[i].block(NZ_, 0,NZ_, NZ_).diagonal().array()).real();
-            AM_u += mult_fac*bzux_m_uzbx_d_.sum();
-            // by*bx - steal Reynolds stress variable for this
-            bzux_m_uzbx_d_ = (rey_mkxky_tmp_.array()*Cin[i].block( 2*NZ_,2*NZ_, NZ_, NZ_).diagonal().array()).real() +   (rey_kz_tmp_.array()*Cin[i].block(3*NZ_, 2*NZ_,NZ_, NZ_).diagonal().array()).real();
-            AM_b += mult_fac*bzux_m_uzbx_d_.sum();
-            //
-            //////////////////////////////////////
-        }
+        // Use Qkl_tmp_ for Mkl to save memory
+        lapFtmp_ = lapFtmp_*ilap2tmp_;
+        Qkl_tmp_ << lapFtmp_, -ilap2tmp_,lapFtmp_, -ilap2tmp_;
+
+        
+                // Energy = trace(Mkl*Ckl), Mkl is diagonal
+        Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
         
         
+//        std::cout << "kx = " << kx_[i] << ", ky = " <<ky_[i] << std::endl;
+//        std::cout << Qkl_tmp_.sum() << std::endl;
+        int num_u_b = num_fluct_/2; // Keep it clear where numbers are coming from.
+        energy_u += Qkl_tmp_.head(NZ_*num_u_b).sum();
+        energy_b += Qkl_tmp_.tail(NZ_*num_u_b).sum();
+        
+//        std::cout << Qkl_tmp_ << std::endl;
+//        std::cout << "a" << std::endl;
+
     }
-    if (tv.energy_save_Q()){
-        // Put the energy on processor 0
-        mpi_.SumReduce_doub(&energy_u,&energy_u_f,1);
-        mpi_.SumReduce_doub(&energy_b,&energy_b_f,1);
-    }
-    if (tv.AngMom_save_Q()){
-        // Put the angular momentum on processor 0
-        mpi_.SumReduce_doub(&AM_u,&AM_u_f,1);
-        mpi_.SumReduce_doub(&AM_b,&AM_b_f,1);
-    }
+    // Put the energy on processor 0
+    mpi_.SumReduce_doub(&energy_u,&energy_u_f,1);
+    mpi_.SumReduce_doub(&energy_b,&energy_b_f,1);
 //    energy_u_f = energy_u; energy_b_f = energy_b;   // If in-place version is desired
 //    mpi_.SumReduce_IP_doub(&energy_u_f,1);
 //    mpi_.SumReduce_IP_doub(&energy_b_f,1);
@@ -669,52 +601,25 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
         ////////////////////////////////////////////
         ///// All this is only on processor 0  /////
         double divfac=1.0/(Nxy_[0]*Nxy_[1]*2*NZ_);
-        divfac = divfac*divfac;
-        energy_u_f = energy_u_f*divfac;
-        energy_b_f = energy_b_f*divfac;
-        AM_u_f = AM_u_f*divfac;
-        AM_b_f = AM_b_f*divfac;
+        energy_u_f = energy_u_f*divfac*divfac;
+        energy_b_f = energy_b_f*divfac*divfac;
         
         
         ///////////////////////////////////////
         ///       MEAN FIELDS            //////
         // Only need to calculate on one processor
         double energy_MU=0, energy_MB=0;
-        double AM_MU =0, AM_MB=0;
         
         energy_MB = (MFin[0].abs2().sum() + MFin[1].abs2().sum())/(NZ_*NZ_);
-        AM_MB = (MFin[0]*MFin[1].conjugate()).real().sum()/(NZ_*NZ_);
         
         ///////////////////////////////////////
         //////         OUTPUT            //////
-        
-        // Energy
         double* en_point = tv.current_energy();
         en_point[0] = energy_MU/2;
         en_point[1] = energy_MB/2;
         en_point[2] = energy_u_f/2;
         en_point[3] = energy_b_f/2;
         
-        // Angular momentum
-        double* AM_point = tv.current_AM();
-        AM_point[0] = AM_MU/2;
-        AM_point[1] = AM_MB/2;
-        AM_point[2] = AM_u_f/2;
-        AM_point[3] = AM_b_f/2;
-        
-        
-        
-        if (tv.reynolds_save_Q()) {
-            //////////////////////////////////////
-            //   Reynolds stress
-            // Just save the previously assigned Reynolds stress to compare By with Bx stress
-            double* rey_point = tv.current_reynolds();
-            rey_point[0] = bzux_m_uzbx_drec_.abs2().sum();
-            rey_point[1] = bzuy_m_uzby_drec_.abs2().sum();
-            //
-            //////////////////////////////////////
-        }
-
         ///// All this is only on processor 0  /////
         ////////////////////////////////////////////
     }
@@ -730,19 +635,18 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
 
 
 
-
 //////////////////////////////////////////////////////
 //         PRIVATE FUNCTIONS FOR INITIALIZATION     //
 
 // fft of the identity matrix
-void MHD_BQlin::Set_fft_identity_(void) {
+void MHD_BQlin_old::Set_fft_identity_(void) {
     fft_identity_ = dcmplxMat::Identity(NZ_,NZ_);
     fft_.back_2D_dim1(fft_identity_.data());
     fft_identity_ /= NZ_;
 }
 
 // Create and store arrays of lap2 to save computation of ffts
-void MHD_BQlin::Define_Lap2_Arrays_(void){
+void MHD_BQlin_old::Define_Lap2_Arrays_(void){
     // Lap2 quantities are stored on all processors, even though I could save some memory here. Easy to change later if a problem, the amount of memory may actually be significant...
     
     // Maximum ky index

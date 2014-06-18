@@ -14,7 +14,7 @@
 /////              MPI FLAG               ////////
 // This is better as a preprocessor directive since it lets you debug in serial more easily
 
-//#define USE_MPI_FLAG
+#define USE_MPI_FLAG
 
 //////////////////////////////////////////////////
 
@@ -31,6 +31,7 @@
 #include <complex>
 //#include <random>
 #include <ctime>
+#include <cmath>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -73,6 +74,7 @@ typedef Eigen::Matrix<dcmplx,Eigen::Dynamic,Eigen::Dynamic> dcmplxMat;
 // USE COLUMN_MAJOR FORMAT FOR MATRIX. THE ONLY PLACE WHERE THIS MIGHT CAUSE A PROBLEM IS IN FFTW, SO LONG AS I'M CAREFUL SHOULD BE EASY
 // Reason for this choice is to facilitate transformation over from Matlab
 typedef Eigen::Array<dcmplx, Eigen::Dynamic, 1> dcmplxVec;
+typedef Eigen::Matrix<dcmplx, Eigen::Dynamic, 1> dcmplxVecM; // vec for eigen matrix object - used for .asDiagonal objects
 typedef Eigen::Array<double, Eigen::Dynamic, 1> doubVec;// For use in linear part
 
 //////////////////////////////////////////////////

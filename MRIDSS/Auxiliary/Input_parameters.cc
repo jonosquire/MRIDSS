@@ -82,11 +82,12 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
         QuasiLinearQ = Read_From_Input_File_<bool>("QuasiLinear?", fullfile, 1);
         
         // Saving time variables
-        energy_save_Q_ = Read_From_Input_File_<bool>("save_energy?", fullfile, 1);
-        AM_save_Q_ = Read_From_Input_File_<bool>("save_angular_mom?", fullfile, 1);
-        dissipation_save_Q_ = Read_From_Input_File_<bool>("save_dissipation?", fullfile, 1);
+        energy_save_Q = Read_From_Input_File_<bool>("save_energy?", fullfile, 0);
+        AM_save_Q = Read_From_Input_File_<bool>("save_angular_mom?", fullfile, 0);
+        dissipation_save_Q = Read_From_Input_File_<bool>("save_dissipation?", fullfile, 0);
+        reynolds_save_Q = Read_From_Input_File_<bool>("save_reynolds_stress?", fullfile, 0);
         
-        mean_field_save_Q_ = Read_From_Input_File_<bool>("mean_field_save?", fullfile, 1);
+        mean_field_save_Q = Read_From_Input_File_<bool>("mean_field_save?", fullfile, 1);
 
     } else {
         std::cout << "Error: Input file not found!" << std::endl;
@@ -102,20 +103,20 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
 void Inputs::initialize_() {
     // Time variables
     nsteps = t_final/dt;
-    timevar_save_nsteps = timvar_save_interval/dt;
-    fullsol_save_nsteps = fullsol_save_interval/dt;
+    timevar_save_nsteps = round(timvar_save_interval/dt);
+    fullsol_save_nsteps = round(fullsol_save_interval/dt);
     
     // Shearing box
     num_before_remap = 2*nsteps; // If no remap
     if (remapQ) {
         TSB = L[1]/L[0]/q;
         // Test for an integer number of steps
-        if (TSB/dt-floor(TSB/dt) != 0.0) {
+        if (fabs(TSB/dt-round(TSB/dt)) > 1e-10) {
             if (mpi_node_== 0){
                 std::cout << "Warning, non-integer number of steps before remapping: " << TSB/dt <<std::endl;
             }
         }
-        num_before_remap = TSB/dt;
+        num_before_remap = round(TSB/dt);
     }
 }
 

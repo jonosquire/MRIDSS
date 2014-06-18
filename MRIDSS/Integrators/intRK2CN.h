@@ -31,8 +31,8 @@ private:
     Model &model_;    // functor to evaluate f(x,t)
     
     // SPACE FOR INTEGRATOR EVALUATION
-    dcmplxMat *Ckl_rhs_;     // temporary space to hold rhs of CKL equation
-    dcmplxVec *MF_rhs_;     // Temporary space to hold rhs of MF equation
+    dcmplxMat *Ckl_rhs_, *Ckl_th2_;     // temporary space to hold rhs of CKL equation
+    dcmplxVec *MF_rhs_, *MF_th2_;     // Temporary space to hold rhs of MF equation
     // Space to hold linear (diffusion) part of operator
     // Double is much quicker than dcmplx if possible
     doubVec * linop_Ckl_;

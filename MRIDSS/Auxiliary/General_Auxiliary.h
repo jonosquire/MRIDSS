@@ -17,6 +17,9 @@
 
 void ShearingBox_Remap(Model* mod, dcmplxMat* Ckl);
 
+// Check aspects of the solution
+void CheckSolution(dcmplxVec* MF, dcmplxMat* Ckl);
+
 // FFTW plan storage (and execution) class
 class fftwPlans {
     // Stores 1-D and 2-D transforms for the mean fields and Ckl
@@ -76,7 +79,7 @@ private:
 class TimeVariables {
 public:
     // Constructor
-    TimeVariables(Inputs SP,  int width, int mpinode); // nsteps is number of saves, width is number to save
+    TimeVariables(Inputs SP,  int width, int numMF, int mpinode); // nsteps is number of saves, width is number to save
     // Destructor
     ~TimeVariables();
     
@@ -87,6 +90,15 @@ public:
     double* energy_at_n(int n) {return energy_[n];};
     double* current_AM() {return angular_momentum_[curr_pos_];};
     double* current_diss() {return dissipation_[curr_pos_];};
+    double* current_reynolds() {return reynolds_[curr_pos_];};
+    
+    // Variables to calculate
+    bool energy_save_Q() {return en_save_Q_;};
+    bool AngMom_save_Q() {return AM_save_Q_;};
+    bool dissip_save_Q() {return diss_save_Q_;};
+    bool reynolds_save_Q() {return rey_save_Q_;};
+    bool MeanField_save_Q() {return MF_save_Q_;};
+    
     
     int number_of_saves() {return nsteps_;};
     
@@ -97,26 +109,35 @@ public:
     void Save_Data();
     
     // Save mean fields - could improve
-    void Save_Mean_Fields(dcmplxVec *MFdata, int numMF, fftwPlans& fft);
+    void Save_Mean_Fields(dcmplxVec *MFdata,  fftwPlans& fft);
     
     
 private:
     // Basic data
     const int nsteps_;  // Number of saves (length of array)
     const int width_;  // Number of saves for each step in each
+    const int numMF_;   // Number of mean fields
+    
+    // Saving data booleans
+    bool en_save_Q_,AM_save_Q_,diss_save_Q_;
+    bool rey_save_Q_;
+    bool MF_save_Q_;
     
     // Actual storage arrays
     double ** energy_;
     double ** angular_momentum_;
     double ** dissipation_;
+    double ** reynolds_;
     // Saving these variables - file streams
     std::ofstream fileS_energy_;
     std::ofstream fileS_angular_momentum_;
     std::ofstream fileS_dissipation_;
+    std::ofstream fileS_reynolds_;
     // Saving these variables - file name
     std::string fname_energy_;
     std::string fname_angular_momentum_;
     std::string fname_dissipation_;
+    std::string fname_reynolds_;
     
     // Mean fields
     std::ofstream fileS_mean_fields_;
@@ -134,6 +155,7 @@ private:
     
     // MPI node on which the data is stored
     int mpi_node_;
+    
 };
 
 #endif /* defined(__MRIDSS__General_Auxiliary__) */

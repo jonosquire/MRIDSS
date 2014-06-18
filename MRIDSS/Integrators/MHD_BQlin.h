@@ -108,25 +108,17 @@ private:
     doubVec Qkl_tmp_;
     // Operator matrices - put into submatrices rather than storing full matrix
     // Some are zero and some are diagonal (eigen .asDiagonal)
-    dcmplxVecM Aop_v11_, Aop_v12_, Aop_v21_, Aop_v43_;
+    dcmplxVec Aop_v11_, Aop_v12_, Aop_v21_, Aop_v43_;
     dcmplxMat Aop_m13_, Aop_m14_, Aop_m23_, Aop_m24_, Aop_m31_, Aop_m41_, Aop_m42_;
-    dcmplxMat Aop_block_tmp_;
-
-    // Ckl_in submatrices - reset after each column for memory
-    dcmplxMat C1_,C2_,C3_,C4_;
-    
+    dcmplxMat Aop_block_tmp_; // Block to use as temporary
     // Real versions of B and derivatives
     dcmplxVec rBy_tmp_;
     dcmplxVec rDzBy_tmp_;
     dcmplxVec rDzzBy_tmp_;
     // Reynolds stresses
     dcmplxMat reynolds_mat_tmp_; // Temporary matrix storage for fft
-    dcmplxVecM rey_mkxky_tmp_,rey_kz_tmp_,rey_mkxkz_tmp_,rey_mky_tmp_; // Convenient to store vectors for converting between u, zeta etc. and u uy uz...
+    Eigen::Matrix<dcmplx, Eigen::Dynamic, 1> rey_mkxky_tmp_,rey_kz_tmp_,rey_mkxkz_tmp_,rey_mky_tmp_; // Convenient to store vectors for converting between u, zeta etc. and u uy uz...
 
-    //////////////////////////////////////////////////////
-
-    //    BLOCK MATRIX MULTIPLICATION                   //
-    void Block_Matrix_Mult_(int column, dcmplxMat& Ckl_in_i,dcmplxMat& Ckl_out_i);
     
     
     //////////////////////////////////////////////////////

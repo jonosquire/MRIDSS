@@ -55,7 +55,6 @@ public:
     
     // Remapping procedure
     friend void ShearingBox_Remap(Model* model,dcmplxMat* Ckl);
-
     
     //////////////////////////////////////////////////////////////////
     //////  AUXILIARY FUNCTIONS OPERATING ON SOLUTION   //////////////

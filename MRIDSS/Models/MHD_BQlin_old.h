@@ -1,13 +1,13 @@
 //
-//  MHD_BQlin.h
+//  MHD_BQlin_old.h
 //  MRIDSS
 //
 //  Created by Jonathan Squire on 4/25/14.
 //  Copyright (c) 2014 J Squire. All rights reserved.
 //
 
-#ifndef __MRIDSS__MHD_BQlin__
-#define __MRIDSS__MHD_BQlin__
+#ifndef __MRIDSS__MHD_BQlin_old__
+#define __MRIDSS__MHD_BQlin_old__
 
 
 #include "Model.h"
@@ -23,10 +23,10 @@
 // Model class for S3T/CE2 shearing box MHD model
 // Basic Quasi-linear MHD
 // Derived from Model (model.h)
-class MHD_BQlin : public Model {
+class MHD_BQlin_old : public Model {
 public:
-    MHD_BQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
-    ~MHD_BQlin();
+    MHD_BQlin_old(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
+    ~MHD_BQlin_old();
     
     
     // Equations themselves
@@ -106,27 +106,17 @@ private:
     double kxtmp_,kytmp_;
     // Qkl temporary
     doubVec Qkl_tmp_;
-    // Operator matrices - put into submatrices rather than storing full matrix
-    // Some are zero and some are diagonal (eigen .asDiagonal)
-    dcmplxVecM Aop_v11_, Aop_v12_, Aop_v21_, Aop_v43_;
-    dcmplxMat Aop_m13_, Aop_m14_, Aop_m23_, Aop_m24_, Aop_m31_, Aop_m41_, Aop_m42_;
-    dcmplxMat Aop_block_tmp_;
-
-    // Ckl_in submatrices - reset after each column for memory
-    dcmplxMat C1_,C2_,C3_,C4_;
-    
+    // Operator matrix
+    dcmplxMat Aop_tmp_;
+    dcmplxMat Aop_block_tmp_,Aop_block_tmp2_; // Blocks to use as temporaries
     // Real versions of B and derivatives
     dcmplxVec rBy_tmp_;
     dcmplxVec rDzBy_tmp_;
     dcmplxVec rDzzBy_tmp_;
     // Reynolds stresses
     dcmplxMat reynolds_mat_tmp_; // Temporary matrix storage for fft
-    dcmplxVecM rey_mkxky_tmp_,rey_kz_tmp_,rey_mkxkz_tmp_,rey_mky_tmp_; // Convenient to store vectors for converting between u, zeta etc. and u uy uz...
+    Eigen::Matrix<dcmplx, Eigen::Dynamic, 1> rey_mkxky_tmp_,rey_kz_tmp_,rey_mkxkz_tmp_,rey_mky_tmp_; // Convenient to store vectors for converting between u, zeta etc. and u uy uz...
 
-    //////////////////////////////////////////////////////
-
-    //    BLOCK MATRIX MULTIPLICATION                   //
-    void Block_Matrix_Mult_(int column, dcmplxMat& Ckl_in_i,dcmplxMat& Ckl_out_i);
     
     
     //////////////////////////////////////////////////////
@@ -141,4 +131,4 @@ private:
 
 
 
-#endif /* defined(__TwoDFluid__MHD_BQlin__) */
+#endif /* defined(__TwoDFluid__MHD_BQlin_old__) */
