@@ -1,5 +1,5 @@
 //
-//  lin.h
+//  Constant_Damping.h
 //  MRIDSS
 //
 //  Created by Jonathan Squire on 4/25/14.
@@ -15,6 +15,8 @@
 #include "../Auxiliary/Initialization_routines.h"
 #include "../Auxiliary/General_Auxiliary.h"
 #include "../Auxiliary/Input_parameters.h"
+#include "../Auxiliary/fftwPlans.h"
+#include "../Auxiliary/TimeVariables.h"
 
 //
 
@@ -25,15 +27,15 @@
 // Derived from Model (model.h)
 class Constant_Damping : public Model {
 public:
-    Constant_Damping(const Inputs& sp, MPIdata& mpi);
+    Constant_Damping(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
     ~Constant_Damping();
     
     
     // Equations themselves
     void rhs(double t, double dt_lin,
-            dcmplxVec *MFin, dcmplxMat *Cin,
-            dcmplxVec *MFout, dcmplxMat *Cout,
-            doubVec * linop_Ckl);
+             dcmplxVec *MFin, dcmplxMat *Cin,
+             dcmplxVec *MFout, dcmplxMat *Cout,
+             doubVec * linop_Ckl);
     // These are split into linear operator (diffusion) and nonlinear part
     // MF Diffusion operator separate - only calculate in constructor
     void linearOPs_Init(double t0,
@@ -47,10 +49,14 @@ public:
     // MPI related
     int Cdimxy() const { return mpi_.nxy(); };// x y dimension
     int index_for_k_array() const { return mpi_.minxy_i(); }; // Index for each processor in k_ arrays
+    // Box dimensions
+    double box_length(int index) const { return L_[index];};
     
     
+    //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation
     void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin );
+    
 private:
     
     // 2 Mean fields and 4 fluctuating fields in this model
@@ -63,16 +69,45 @@ private:
     const double eta_;// viscosity & resistivity
     const double q_;
     const double f_noise_; // driving noise
+    const double QL_YN_; // Turn on quasi-linear feedback
+    
+    // MPI data
+    MPIdata& mpi_; // Reference to MPI data
+    
+    // Dealias setup
+    int delaiasBnds_[2]; // Stores the bounds of the arrays for dealias
+    
+    // Useful arrays
+    int totalN_;
+    double mult_noise_fac_; // Factor to multiply noise to get values consistent with previous numbers
+    
+    // Pre-calculate ilap2 related quantities to save computation (mainly for fft matrices)
+    int* ky_index_; // Stores index in ky for a given full nxy index
+    doubVec* lap2_, *ilap2_; // Laplacian and inverse
+
     
     
-    // Temporary variables
-    doubVec lapFtmp_, lap2tmp_;
+    
+    
+    ////////////////////////////////////////////////////
+    //               TEMPORARY VARIABLES              //
+    doubVec lapFtmp_, lap2tmp_; // Laplacians - nice to still have lap2
+    doubVec ilapFtmp_, ilap2tmp_; // Inverse Laplacians
+    
+    dcmplx kxctmp_, kyctmp_;
     double kxtmp_,kytmp_;
     // Qkl temporary
     doubVec Qkl_tmp_;
     
-    // MPI data
-    MPIdata& mpi_; // Reference to MPI data
+    doubVec Aop_tmp_; // A matrix, use asDiagonal
+    
+    
+    
+    //////////////////////////////////////////////////////
+    //         PRIVATE FUNCTIONS FOR INITIALIZATION     //
+    
+    // Create and store arrays of lap2 to save computation of ffts
+    void Define_Lap2_Arrays_(void);
     
 };
 

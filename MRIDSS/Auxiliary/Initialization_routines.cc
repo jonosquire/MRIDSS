@@ -24,13 +24,15 @@ void Initialize_Solutions(dcmplxVec *MF, dcmplxMat* Ckl,Model* fluidEqs) {
 
 
 // Initial conditions - outputs in Fourier space
-void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, int numMF, int NXY, MPIdata& mpi, fftwPlans& fft){
+void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Model* equations, MPIdata& mpi, fftwPlans& fft){
 //    // Generate random distribution
 //    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 //    std::default_random_engine generator(seed);
 //    std::normal_distribution<double> distribution(0.0,1.0);
 //    auto normal_dist = std::bind ( distribution, generator ); // Asign simple call
     
+    int NXY = mpi.nxy();
+    int numMF = equations->num_MFs();
     
     /////////////////////////////////
     //      EVERYTHING ZERO        //
@@ -86,13 +88,20 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, int numMF, int NXY, MPIda
 //    }
 
     // Assign to mean fields
-    // THIS ASSUMES LZ=2pi
+    double LZ = equations->box_length(3);
     doubVec zg = doubVec::LinSpaced( MF[0].size(), 0, 2*PI*(1.0-1.0/MF[0].size()) );
+    // Sets it to the lowest mode in the box
     MF[0].setZero();
     for (int i=0; i<MF[0].size(); ++i) {
-        MF[1](i) = (dcmplx) 0.00001*cos( zg(i) );
+        MF[1](i) = (dcmplx) 0.01*cos( zg(i) );
     }
-//    std::cout <<MF[1] << std::endl;
+//    // Sets to random in Bx and By
+//    double mult_fac[2] = {1e-7,1e-6};
+//    for (int i=0; i<numMF; ++i) {
+//        MF[i].real().setRandom();
+//        MF[i].imag().setZero();
+//        MF[i] *= mult_fac[i];
+//    }
 
     for (int i=0; i<numMF; ++i) {
         fft.for_1D(MF[i].data());
@@ -128,27 +137,7 @@ void define_kxy_array(dcmplx* kx,dcmplx* ky, int* ky_index, int* Nxy, const doub
         }
     }
 }
-// Another version if ky_index (list of ky index corresponding to ky) is not needed
-void define_kxy_array(dcmplx* kx,dcmplx* ky, int* Nxy, const double* L){
-    // Define kx and ky arrays - length is Nx*Ny
-    
-    // Leave out the (zero,zero) frequncy
-    
-    // Include only positive ky values!
-    for (int i=0; i<Nxy[0]/2; ++i) {
-        for (int j=0; j<Nxy[1]; ++j) {
-            kx[j+Nxy[1]*i]=dcmplx(0,i*2*PI/L[0]);
-            ky[j+Nxy[1]*i]=dcmplx(0,j*2*PI/L[1]);
-        }
-    }
-    // Leave out the Nyquist frequncy in kx
-    for (int i=Nxy[0]/2+1; i<Nxy[0]; ++i) {
-        for (int j=0; j<Nxy[1]; ++j) {
-            kx[j+Nxy[1]*(i-1)]=dcmplx(0,(-Nxy[0]+i)*2*PI/L[0]);
-            ky[j+Nxy[1]*(i-1)]=dcmplx(0,j*2*PI/L[1]);
-        }
-    }
-}
+
 
 // Define 1-D kz array
 void define_kz_array(dcmplxVec& kz, int NZ, const double* L) {

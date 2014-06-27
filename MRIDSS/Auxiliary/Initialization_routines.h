@@ -18,13 +18,12 @@
 #include "General_Auxiliary.h"
 
 // Initial conditions
-void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, int numMF, int NXY, MPIdata& mpi, fftwPlans& fft);
+void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl,  Model* equations,MPIdata& mpi, fftwPlans& fft);
 // Initialize solutions
 void Initialize_Solutions(dcmplxVec *MF, dcmplxMat* Ckl, Model* fluidEqs);
 
 // Initializing k
 void define_kxy_array(dcmplx* kx,dcmplx* ky, int* ky_index, int* Nxy, const double* L);
-void define_kxy_array(dcmplx* kx,dcmplx* ky, int* Nxy, const double* L);
 
 void define_kz_array(dcmplxVec& kz, int NZ, const double* L);
 

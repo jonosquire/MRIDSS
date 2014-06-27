@@ -11,12 +11,12 @@
 
 #include "../General_Definitions.h"
 #include "../Auxiliary/MPIdata.h"
+#include "../Auxiliary/TimeVariables.h"
 
 // Abstract model class - container for equations of motion for MRIDSS
 // Ckl data is a pointer array (size dimxy) of Eigen matrices (size dimz^2)
 // Mean field data is a (num_MF) pointer array of Eigen matrices of size NZ
 
-class TimeVariables; // Not ideal here, but sort of shot myseld in the foot
 
 class Model {
 public:
@@ -49,9 +49,16 @@ public:
     virtual int Cdimz() const = 0;  // In z (size of eigen matrix)
     virtual int MFdimz() const = 0;  // Size of MF vectors in z
     virtual int num_MFs() const = 0;  // Number of mean fields
+    // Box size
+    virtual double box_length(int index) const =0; // Size of box
+    
     // MPI related
     virtual int Cdimxy() const = 0; // Size of C array on given MPI process
     virtual int index_for_k_array() const =0;
+    
+    // Return kx - necessary for remapping
+    dcmplx* kx_pointer() const {return kx_;};
+    dcmplx* ky_pointer() const {return ky_;};
     
     // Remapping procedure
     friend void ShearingBox_Remap(Model* model,dcmplxMat* Ckl);

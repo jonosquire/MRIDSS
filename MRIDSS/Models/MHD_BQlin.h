@@ -15,6 +15,8 @@
 #include "../Auxiliary/Initialization_routines.h"
 #include "../Auxiliary/General_Auxiliary.h"
 #include "../Auxiliary/Input_parameters.h"
+#include "../Auxiliary/fftwPlans.h"
+#include "../Auxiliary/TimeVariables.h"
 
 //
 
@@ -47,6 +49,8 @@ public:
     // MPI related
     int Cdimxy() const { return mpi_.nxy(); };// x y dimension
     int index_for_k_array() const { return mpi_.minxy_i(); }; // Index for each processor in k_ arrays
+    // Box dimensions
+    double box_length(int index) const { return L_[index];};
     
     
     // Dealiasing
@@ -58,6 +62,11 @@ public:
     void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin );
 
 private:
+    
+    ////////////
+    // FOR DEBUGGING - DELETE
+    int reference_NZ_;
+    int reference_NXNY_;
     
     // 2 Mean fields and 4 fluctuating fields in this model
     const int num_MF_;
@@ -87,6 +96,9 @@ private:
     doubVec* lap2_, *ilap2_; // Laplacian and inverse
     dcmplxMat* fft_ilap2_,*fft_kzilap2_,*fft_kz2ilap2_; // ifft of ilap2, kz*ilap2 and kz^2*ilap2
     
+    // Sizes for driving and energy
+    long totalN2_;
+    double mult_noise_fac_; // Factor to multiply noise to get values consistent with previous numbers
     
     // Reynolds stress - store both complex and double for fft and to pass less data around with MPI
     // complex
@@ -95,6 +107,8 @@ private:
     // double
     doubVec bzux_m_uzbx_d_, bzux_m_uzbx_drec_; // bz*ux-uz*bx
     doubVec bzuy_m_uzby_d_, bzuy_m_uzby_drec_; // bz*uy - uz*by
+    
+    double * reynolds_save_tmp_; // Saving the various contributions to mean-field dynamo
 
     
     ////////////////////////////////////////////////////

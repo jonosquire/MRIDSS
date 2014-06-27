@@ -35,7 +35,12 @@ public:
     void Split_NXY_Grid(int nxy_full);
     
     // Printing
-    void print1(std::string instr);
+    void print1(std::string instr) const;
+    void printAll(std::string instr) const;
+    
+    // Barrier
+    void Barrier() const;
+    
     
     ////////////////////////////////////////////////////
     // MPI reduce functions

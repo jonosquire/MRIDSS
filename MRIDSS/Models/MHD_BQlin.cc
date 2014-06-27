@@ -47,9 +47,17 @@ fft_(fft) // FFT data
     fft_.calculatePlans( NZ_ );
     
     // Delalias setup
-    delaiasBnds_[0] = NZ_/3+1; // Delete array including these elements
-    delaiasBnds_[1] = NZ_-NZ_/3-1;
+    reference_NZ_ = NZ_;
+    reference_NXNY_ = Nxy_[0];
+    int NZdebug = reference_NZ_;  /// TO DELETE!!!!!!!
+    delaiasBnds_[0] = NZdebug/3+1; // Delete array including these elements
+    delaiasBnds_[1] = NZ_-NZdebug/3-1; // PUT BACK TO NZ_!!!!
 
+    // Sizes for
+    totalN2_ = Nxy_[0]*Nxy_[1]*2*NZ_;
+    totalN2_ = totalN2_*totalN2_;
+    mult_noise_fac_ = 1.0/(16*32*32); // Defined so that consistent with (16, 32, 32) results
+    mult_noise_fac_ = mult_noise_fac_*mult_noise_fac_;
     
     ////////////////////////////////////////////////////
     // Useful arrays to save computation
@@ -67,6 +75,8 @@ fft_(fft) // FFT data
     // Receive buffers for MPI, for some reason MPI::IN_PLACE is not giving the correct result!
     bzux_m_uzbx_drec_ = doubVec::Zero(NZ_);
     bzuy_m_uzby_drec_ = doubVec::Zero(NZ_);
+    
+    reynolds_save_tmp_ = new double[5];
     
     
     ////////////////////////////////////////////////////
@@ -139,6 +149,8 @@ MHD_BQlin::~MHD_BQlin(){
     delete[] fft_kzilap2_;
     delete[] fft_kz2ilap2_;
     
+    // Data arrays
+    delete[] reynolds_save_tmp_;
 }
 
 
@@ -165,7 +177,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
     
     
     /////////////////////////////////////
-    //   ALL OF THIS MUST BE PARALLELIZED
+    //   ALL OF THIS IS PARALLELIZED
     for (int i=0; i<Cdimxy();  ++i){
         
         // Full Loop containing all the main work on Ckl
@@ -195,11 +207,37 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         }
         else {
             lapFtmp_ = lap2tmp_/lapFtmp_; // lapFtmp_ is no longer lapF!!!
-            if (kytmp_==0) { // Don't drive the ky=kz=0 component (variables not invertible)
+            // CANNOT USE AFTER THIS!
+            if (kytmp_==0.0) { // Don't drive the ky=kz=0 component (variables not invertible)
                 lapFtmp_(0)=0;
             }
+//            /////////////   DEBUGING ////////////////
+//            /////      TO DELETE     ////////////////
+//            int kxkycut = reference_NXNY_/2-1;
+//            double kxmax = 2*PI/L_[0]*kxkycut, kymax = 2*PI/L_[1]*kxkycut;
+//            if (fabs(kxtmp_ - q_*t*kytmp_) > kxmax || fabs(kytmp_) > kymax) {
+//                lapFtmp_.setZero();
+//                lap2tmp_.setZero();
+//            }
+//            int kzcut = reference_NZ_/2-1;
+//            double kzmax = 2*PI/L_[2]*kzcut;
+//            for (int i=0; i<NZ_; ++i) {
+//                if (abs(kz_(i)) > kzmax) {
+//                    lapFtmp_(i) = 0;
+//                    lap2tmp_(i) = 0;
+//                }
+//            }
+//            ////////////////
+            
             Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
-            Qkl_tmp_ = (f_noise_*f_noise_)*Qkl_tmp_.abs();
+            Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
+            
+//            double Qkl_sum = Qkl_tmp_.real().sum()/(Nxy_[0]*2*Nxy_[1])/(Nxy_[0]*2*Nxy_[1]);
+//            if ( Qkl_sum>1e-8 ) {
+//                std::cout << "kx = " << (kxtmp_- q_*t*kytmp_)/(2*PI) << ", ky = " << kytmp_/(2*PI) << std::endl;
+//                std::cout << Qkl_sum << std::endl;
+//            }
+            
         }
         ////////////////////////////////////////
         
@@ -363,9 +401,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         reynolds_mat_tmp_ = reynolds_mat_tmp_.conjugate();
         fft_.back_2D_dim2(reynolds_mat_tmp_.data());
         reynolds_mat_tmp_ = reynolds_mat_tmp_.conjugate(); // Not necessary, but better not to be too confusing
-        
-//        std::cout << "kx = " << kxtmp_ << ", ky = " << kytmp_ << std::endl;
-//        std::cout << reynolds_mat_tmp_ << std::endl;
+
         // Keep a running sum
         bzux_m_uzbx_d_ += ftfac*(reynolds_mat_tmp_.diagonal().array().real());
         
@@ -387,6 +423,24 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         reynolds_mat_tmp_ = reynolds_mat_tmp_.conjugate(); // Not necessary, but better not to be too confusing
         // Keep a running sum
         bzuy_m_uzby_d_ -= ftfac*(reynolds_mat_tmp_.diagonal().array().real());
+        
+        
+        ////////////// DEBUGGING - DELETE!!!! ///////
+//        double Cklsum = Ckl_in[i].array().real().sum()/(Nxy_[0]*2*Nxy_[1])/(Nxy_[0]*2*Nxy_[1]);
+//        if ( Cklsum>1e-8 ) {
+//            std::cout << "kx = " << (kxtmp_- q_*t*kytmp_)/(2*PI) << ", ky = " << kytmp_/(2*PI) << std::endl;
+//            std::cout << Cklsum << std::endl;
+//        }
+        
+        
+        
+//        bzux_m_uzbx_c_ =ftfac*(reynolds_mat_tmp_.diagonal().array());
+//        fft_.for_1D(bzux_m_uzbx_c_.data());
+//        if ( bzux_m_uzbx_c_.abs().sum()>1e-8 ) {
+//            std::cout << "kx = " << (kxtmp_- q_*t*kytmp_)/(2*PI) << ", ky = " << kytmp_/(2*PI) << std::endl;
+//            std::cout << 1000000*bzux_m_uzbx_c_.transpose()/NZ_/(Nxy_[0]*2*Nxy_[1])/(Nxy_[0]*2*Nxy_[1]) << std::endl;
+//        }
+        ////////////// DEBUGGING - DELETE!!!! ///////
         
         //////                                               //////
         ///////////////////////////////////////////////////////////
@@ -454,6 +508,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         mpi_.SumAllReduce_double(bzuy_m_uzby_d_.data(), bzuy_m_uzby_drec_.data(), NZ_);
         
         // Convert to complex - didn't seem worth the effort of fftw real transforms as time spent here (and in MF transforms) will be very minimal
+        
         bzux_m_uzbx_c_ = bzux_m_uzbx_drec_.cast<dcmplx>();
         bzuy_m_uzby_c_ = bzuy_m_uzby_drec_.cast<dcmplx>();
         
@@ -472,15 +527,42 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         bzuy_m_uzby_c_.setZero();
     }
 //    std::cout << "kx = " << kxtmp_-q_*dt_lin*kytmp_ << ", ky = " << kytmp_ << std::endl;
+//    for (int i=0; i<NZ_; ++i) {
+//        
+//        if (fabs(imag(bzux_m_uzbx_c_(i)))<1e-15) {
+//            bzux_m_uzbx_c_(i).imag(0);
+//        }
+//        if (fabs(real(bzux_m_uzbx_c_(i)))<1e-15) {
+//            bzux_m_uzbx_c_(i).real(0);
+//        }
+//        if (fabs(imag(bzuy_m_uzby_c_(i)))<1e-15) {
+//            bzuy_m_uzby_c_(i).imag(0);
+//        }
+//        if (fabs(real(bzuy_m_uzby_c_(i)))<1e-15) {
+//            bzuy_m_uzby_c_(i).real(0);
+//        }
+//        
+//    }
+//
 //    std::cout << bzux_m_uzbx_c_.transpose() << std::endl;
 //    std::cout << bzuy_m_uzby_c_.transpose() << std::endl;
-//    
+//
     //////////////////////////////////////
     ////   MEAN FIELDS    ////////////////
     // In some integrators MFout will be the same as MFin.
     // Because of this, important to calculate MFout[1] first, since it depends on MFin[1], and this would be updated otherwise
+    // Changed this, should be safer now
+    
+    // DELETE!!
+//    std::stringstream print_stream;
+//    print_stream << bzuy_m_uzby_c_.transpose()/NZ_ << std::endl;
+//    mpi_.print1(print_stream.str());
+    
+    
+    
     MFout[1] = -q_*MFin[0] + bzuy_m_uzby_c_;
     MFout[0] = bzux_m_uzbx_c_;
+    
     
 
 }
@@ -665,11 +747,11 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
 //    mpi_.SumReduce_IP_doub(&energy_u_f,1);
 //    mpi_.SumReduce_IP_doub(&energy_b_f,1);
     
-    if (mpi_.my_n_v() == tv.tv_mpi_node()) {
+    // Currently, TimeVariables is set to save on root process, may want to generalize this at some point (SumReduce_doub is also)
+    if (mpi_.my_n_v() == 0) {
         ////////////////////////////////////////////
         ///// All this is only on processor 0  /////
-        double divfac=1.0/(Nxy_[0]*Nxy_[1]*2*NZ_);
-        divfac = divfac*divfac;
+        double divfac=1.0/totalN2_;
         energy_u_f = energy_u_f*divfac;
         energy_b_f = energy_b_f*divfac;
         AM_u_f = AM_u_f*divfac;
@@ -707,10 +789,21 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
         if (tv.reynolds_save_Q()) {
             //////////////////////////////////////
             //   Reynolds stress
-            // Just save the previously assigned Reynolds stress to compare By with Bx stress
+            // Saves quantities to do with the reynolds stress and dynamo
+            // 1) Shear contribution: Re( -q Bx(k0) By(k0))/By(k0)
+            // 2) y emf: Re( bzuy_m_uzby_c_*By(k0) )/By(k0)
+            // 3) y dissipation: eta*k0^2*By(k0)
+            // 4) x emf: Re( bzux_m_uzbx_c_*Bx(k0) )/Bx(k0)
+            // 5) x dissipation: eta*k0^2*Bx(k0)
+            // Have assumed k0 to be lowest kz! i.e., driving largest dynamo possible in the box
+            // There may be slight errors here from saving using the updated values of MFin, presumably this is a small effect, especially at high resolution (low dt) and in steady state.
             double* rey_point = tv.current_reynolds();
-            rey_point[0] = bzux_m_uzbx_drec_.abs2().sum();
-            rey_point[1] = bzuy_m_uzby_drec_.abs2().sum();
+            rey_point[0] = real(-q_*MFin[0](1)*conj(MFin[1](1)))/abs(MFin[1](1) );
+            rey_point[1] = real(bzuy_m_uzby_c_(1)*conj(MFin[1](1)))/abs(MFin[1](1) );
+            rey_point[2] = eta_ *kz2_(1)*abs(MFin[1](1) );
+            rey_point[3] = real(bzux_m_uzbx_c_(1)*conj(MFin[0](1)))/abs(MFin[0](1) );
+            rey_point[4] = eta_ * kz2_(1)*abs(MFin[0](1) );
+
             //
             //////////////////////////////////////
         }
@@ -719,8 +812,8 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
         ////////////////////////////////////////////
     }
     
-    // Increase the number to save
-    tv.increase_savenum();
+    // Save the data
+    tv.Save_Data();
     
 }
 

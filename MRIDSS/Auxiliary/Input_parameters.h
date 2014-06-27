@@ -38,6 +38,9 @@ public:
     double dt;
     double t_final; // Final time
     double t_initial; // Initial time
+    double t_start; // Start time (different when loading from file)
+    int i_start; // Start step (different from 0 when loading from file)
+
     // Saving
     double timvar_save_interval;   // Interval for saving energy, AM etc.
     double fullsol_save_interval;   // Interval for saving full solution
@@ -60,6 +63,9 @@ public:
     bool dissipation_save_Q;
     bool reynolds_save_Q;
     bool mean_field_save_Q;
+    
+    // Start using saved data
+    bool start_from_saved_Q;
     
     
     ///////////////////////////////////////////////

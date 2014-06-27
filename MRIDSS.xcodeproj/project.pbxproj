@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		A20239B4194D3FFA00275CD9 /* MHD_BQlin.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20239B2194D3FFA00275CD9 /* MHD_BQlin.cc */; };
+		A20239BB195B257A00275CD9 /* fftwPlans.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20239B9195B257A00275CD9 /* fftwPlans.cc */; };
+		A20239BE195B262400275CD9 /* TimeVariables.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20239BC195B262400275CD9 /* TimeVariables.cc */; };
 		A20A82B9193FE9BA00E2DF42 /* intRK2CN.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20A82B7193FE9BA00E2DF42 /* intRK2CN.cc */; };
 		A250B13A1937307A00218230 /* Constant_Damping.cc in Sources */ = {isa = PBXBuildFile; fileRef = A250B1381937307A00218230 /* Constant_Damping.cc */; };
 		A254623A191A60B300920C0A /* Input_parameters.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2546238191A60B300920C0A /* Input_parameters.cc */; };
@@ -36,6 +38,10 @@
 /* Begin PBXFileReference section */
 		A20239B2194D3FFA00275CD9 /* MHD_BQlin.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MHD_BQlin.cc; sourceTree = "<group>"; };
 		A20239B3194D3FFA00275CD9 /* MHD_BQlin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MHD_BQlin.h; sourceTree = "<group>"; };
+		A20239B9195B257A00275CD9 /* fftwPlans.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fftwPlans.cc; sourceTree = "<group>"; };
+		A20239BA195B257A00275CD9 /* fftwPlans.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fftwPlans.h; sourceTree = "<group>"; };
+		A20239BC195B262400275CD9 /* TimeVariables.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TimeVariables.cc; sourceTree = "<group>"; };
+		A20239BD195B262400275CD9 /* TimeVariables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TimeVariables.h; sourceTree = "<group>"; };
 		A20A82B7193FE9BA00E2DF42 /* intRK2CN.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = intRK2CN.cc; sourceTree = "<group>"; };
 		A20A82B8193FE9BA00E2DF42 /* intRK2CN.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = intRK2CN.h; sourceTree = "<group>"; };
 		A250B1381937307A00218230 /* Constant_Damping.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Constant_Damping.cc; sourceTree = "<group>"; };
@@ -131,12 +137,16 @@
 		A2BA0FBE1912F41B00866A27 /* Auxiliary */ = {
 			isa = PBXGroup;
 			children = (
-				A2BA0FC31912F44800866A27 /* Initialization_routines.h */,
 				A2BA0FC21912F44800866A27 /* Initialization_routines.cc */,
+				A2BA0FC31912F44800866A27 /* Initialization_routines.h */,
 				A2546238191A60B300920C0A /* Input_parameters.cc */,
 				A2546239191A60B300920C0A /* Input_parameters.h */,
 				A2ADBADF1917D7370082125D /* General_Auxiliary.cc */,
 				A2ADBAE01917D7370082125D /* General_Auxiliary.h */,
+				A20239BC195B262400275CD9 /* TimeVariables.cc */,
+				A20239BD195B262400275CD9 /* TimeVariables.h */,
+				A20239B9195B257A00275CD9 /* fftwPlans.cc */,
+				A20239BA195B257A00275CD9 /* fftwPlans.h */,
 				A254623E191AD01B00920C0A /* MPIdata.cc */,
 				A254623F191AD01B00920C0A /* MPIdata.h */,
 			);
@@ -198,8 +208,10 @@
 				A2BA0FA11912A96C00866A27 /* main.cc in Sources */,
 				A20239B4194D3FFA00275CD9 /* MHD_BQlin.cc in Sources */,
 				A2ADBADE19169F860082125D /* intEulerCN.cc in Sources */,
+				A20239BE195B262400275CD9 /* TimeVariables.cc in Sources */,
 				A2546240191AD01B00920C0A /* MPIdata.cc in Sources */,
 				A2BA0FB11912B14900866A27 /* intEuler.cc in Sources */,
+				A20239BB195B257A00275CD9 /* fftwPlans.cc in Sources */,
 				A2ADBAE11917D7370082125D /* General_Auxiliary.cc in Sources */,
 				A254623A191A60B300920C0A /* Input_parameters.cc in Sources */,
 				A2BA0FC41912F44800866A27 /* Initialization_routines.cc in Sources */,

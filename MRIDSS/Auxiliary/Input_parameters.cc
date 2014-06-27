@@ -17,9 +17,9 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
     // Find input file - this is a file in base directory with extension .DSSinput
     std::string file_name = Find_Input_File(CURR_BASE_DIR);
     
+    simulation_dir = CURR_BASE_DIR+DATA_DIR+file_name+"/";
     if (mpi_node_ == 0) {
         // Make a new directory in /Data named the same as the input file
-        simulation_dir = CURR_BASE_DIR+DATA_DIR+file_name+"/";
         // Check if it exists - create if it does not
         tinydir_dir tmp_dir;
         int dir_status =tinydir_open(&tmp_dir, simulation_dir.c_str());
@@ -30,6 +30,7 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
                 std::cout << "Warning: Failed to create simulation directory: " << simulation_dir << std::endl;
             }
         }
+        tinydir_close(&tmp_dir);
     }
     
     // Reads data from input file
@@ -54,6 +55,14 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
         ////////////////////////////////////////////
         // Find each variable from input
         
+        
+        ////////////////////////////////////////////
+        // Read_From_Input_File seems to cause a memory
+        // leak when it is reading a long number (e.g., 0.06666666667)
+        // However, it is read correctly and the leak is
+        // tiny, so I guess will just leave this.
+        ////////////////////////////////////////////
+        
         // Find each variable in the input file
         // Grid - nx, ny nz, lx,ly, lz
         NXY[0] = Read_From_Input_File_<int>("nx_",fullfile,16);
@@ -65,11 +74,15 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
         
         // Time domain variables: dt, t_final, t_initial
         dt = Read_From_Input_File_<double>("dt_",fullfile,0.33333333333333);
-        t_final = Read_From_Input_File_<double>("t_final_",fullfile,10);
-        t_initial = Read_From_Input_File_<double>("t_initial_",fullfile,0);
+        t_final = Read_From_Input_File_<double>("t_final_",fullfile,10.0);
+        t_initial = Read_From_Input_File_<double>("t_initial_",fullfile,0.0);
         // Saving: tv_save, full_save
         timvar_save_interval = Read_From_Input_File_<double>("tv_save_",fullfile,dt);
-        fullsol_save_interval = Read_From_Input_File_<double>("full_save_",fullfile,t_final+1);
+        fullsol_save_interval = Read_From_Input_File_<double>("full_save_",fullfile,0.0);
+        if (fullsol_save_interval<t_final && fullsol_save_interval != 0) {
+            mpi.print1("Warning: intermediate saves not yet supported!\nSetting fullsol_save_interval to t_final\n");
+            fullsol_save_interval = t_final + 1;
+        }
         
         // Other physical parameters: nu, eta, q, f_noise
         nu = Read_From_Input_File_<double>("nu_",fullfile,0.01);
@@ -88,6 +101,11 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
         reynolds_save_Q = Read_From_Input_File_<bool>("save_reynolds_stress?", fullfile, 0);
         
         mean_field_save_Q = Read_From_Input_File_<bool>("mean_field_save?", fullfile, 1);
+        
+        // Restarting simulation
+        start_from_saved_Q = Read_From_Input_File_<bool>("start_from_saved?", fullfile, 0);
+        // If True, takes step, time, and data from FINAL_CKL_STATE_Proc#
+        // This is loaded after other initialization, with t_final taken from input
 
     } else {
         std::cout << "Error: Input file not found!" << std::endl;
@@ -103,6 +121,8 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
 void Inputs::initialize_() {
     // Time variables
     nsteps = t_final/dt;
+    t_start = t_initial;
+    i_start = 0;
     timevar_save_nsteps = round(timvar_save_interval/dt);
     fullsol_save_nsteps = round(fullsol_save_interval/dt);
     
@@ -141,7 +161,8 @@ T Inputs::Read_From_Input_File_(const std::string& varstr, const std::string& fu
         std::string str_end = full_file.substr(pos+1,pos+100);
         // Read into variable
         T out;
-        std::istringstream(str_end) >> out;
+        std::istringstream str_end_SS(str_end);
+        str_end_SS >> out;
         
         return out;
     } else {

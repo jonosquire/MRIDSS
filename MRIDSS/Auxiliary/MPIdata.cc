@@ -44,11 +44,35 @@ void MPIdata::Split_NXY_Grid(int nxy_full){
 
 /////////////////////////////////////////////////
 ////        PRINTING
-void MPIdata::print1(std::string instr) {
+// NB: Have to pass by value if you want to use stringstream
+void MPIdata::print1(std::string instr) const {
     // Print single statement from processor 0
     if (my_node_ == 0) {
         std::cout << instr;
     }
+}
+
+void MPIdata::printAll(std::string instr) const{
+    // Prints processor number and instr out sequentially
+    // Guaranteed to print each seperately so don't get overlapping output
+    for(int i = 0; i < total_n_v(); i++) {
+        Barrier();
+        if (i == my_n_v()) {
+            std::cout << "Proc " << my_n_v() << std::endl;
+            std::cout << instr << std::endl;
+        }
+    }
+
+    
+}
+
+
+//////////////////////////////////////////////////
+//  MPI BARRIER
+void MPIdata::Barrier() const {
+#ifdef USE_MPI_FLAG
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
 
 

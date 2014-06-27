@@ -82,6 +82,9 @@ RK2CN::~RK2CN() {
     
     delete[] Ckl_rhs_;
     delete[] MF_rhs_;
+    delete[] Ckl_th2_;
+    delete[] MF_th2_;
+
     
 }
 
