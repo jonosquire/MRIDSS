@@ -28,7 +28,7 @@ void ShearingBox_Remap(Model* mod, dcmplxMat* Ckl){
         // If kx_ is too large zero out Ckl and set kx negative
         ////////////////////////////////
         double overlap = kxp[k_i].real()+1 - mod->Nxy_[0]/2;
-        if (overlap>0) {
+        if (overlap>0.5) {
             Ckl[i].setZero();
             kxp[k_i] = -mod->Nxy_[0]/2+overlap;
         }

@@ -47,17 +47,17 @@ fft_(fft) // FFT data
     fft_.calculatePlans( NZ_ );
     
     // Delalias setup
-    reference_NZ_ = NZ_;
-    reference_NXNY_ = Nxy_[0];
-    int NZdebug = reference_NZ_;  /// TO DELETE!!!!!!!
-    delaiasBnds_[0] = NZdebug/3+1; // Delete array including these elements
-    delaiasBnds_[1] = NZ_-NZdebug/3-1; // PUT BACK TO NZ_!!!!
+    delaiasBnds_[0] = NZ_/3+1; // Delete array including these elements
+    delaiasBnds_[1] = NZ_-NZ_/3-1; // PUT BACK TO NZ_!!!!
 
     // Sizes for
     totalN2_ = Nxy_[0]*Nxy_[1]*2*NZ_;
     totalN2_ = totalN2_*totalN2_;
     mult_noise_fac_ = 1.0/(16*32*32); // Defined so that consistent with (16, 32, 32) results
     mult_noise_fac_ = mult_noise_fac_*mult_noise_fac_;
+    
+    // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
+    dont_drive_ky0_modes_Q_ = 1;
     
     ////////////////////////////////////////////////////
     // Useful arrays to save computation
@@ -231,12 +231,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
             
             Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
             Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
-            
-//            double Qkl_sum = Qkl_tmp_.real().sum()/(Nxy_[0]*2*Nxy_[1])/(Nxy_[0]*2*Nxy_[1]);
-//            if ( Qkl_sum>1e-8 ) {
-//                std::cout << "kx = " << (kxtmp_- q_*t*kytmp_)/(2*PI) << ", ky = " << kytmp_/(2*PI) << std::endl;
-//                std::cout << Qkl_sum << std::endl;
-//            }
+
             
         }
         ////////////////////////////////////////

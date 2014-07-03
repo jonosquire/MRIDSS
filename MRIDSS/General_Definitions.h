@@ -84,6 +84,7 @@ typedef Eigen::Array<double, Eigen::Dynamic, 1> doubVec;// For use in linear par
 const double PI=atan(1)*4;
 
 const std::string CURR_BASE_DIR = "/Users/jsquire/Documents/MRIDSS/MRIDSS/";
-const std::string DATA_DIR = "Data/";
+const std::string DATA_DIR = "/Users/jsquire/Documents/MRIDSS/MRIDSS/Data/";
+// Data directory is defined from root so that /p/mridss can be used on the cluster
 
 #endif

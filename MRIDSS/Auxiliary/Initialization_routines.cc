@@ -93,7 +93,7 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Model* equations, MPIdata
     // Sets it to the lowest mode in the box
     MF[0].setZero();
     for (int i=0; i<MF[0].size(); ++i) {
-        MF[1](i) = (dcmplx) 0.01*cos( zg(i) );
+        MF[1](i) = (dcmplx) 0.01*cos( zg(i) );//+0.01*cos( 2*zg(i) );
     }
 //    // Sets to random in Bx and By
 //    double mult_fac[2] = {1e-7,1e-6};

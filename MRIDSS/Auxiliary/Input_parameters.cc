@@ -17,7 +17,7 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
     // Find input file - this is a file in base directory with extension .DSSinput
     std::string file_name = Find_Input_File(CURR_BASE_DIR);
     
-    simulation_dir = CURR_BASE_DIR+DATA_DIR+file_name+"/";
+    simulation_dir = DATA_DIR+file_name+"/";
     if (mpi_node_ == 0) {
         // Make a new directory in /Data named the same as the input file
         // Check if it exists - create if it does not

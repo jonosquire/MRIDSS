@@ -63,10 +63,6 @@ public:
 
 private:
     
-    ////////////
-    // FOR DEBUGGING - DELETE
-    int reference_NZ_;
-    int reference_NXNY_;
     
     // 2 Mean fields and 4 fluctuating fields in this model
     const int num_MF_;
@@ -99,6 +95,9 @@ private:
     // Sizes for driving and energy
     long totalN2_;
     double mult_noise_fac_; // Factor to multiply noise to get values consistent with previous numbers
+    
+    // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
+    bool dont_drive_ky0_modes_Q_;
     
     // Reynolds stress - store both complex and double for fft and to pass less data around with MPI
     // complex
