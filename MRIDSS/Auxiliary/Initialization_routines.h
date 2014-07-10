@@ -18,7 +18,7 @@
 #include "General_Auxiliary.h"
 
 // Initial conditions
-void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl,  Model* equations,MPIdata& mpi, fftwPlans& fft);
+void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl,  Inputs SP, Model* equations,MPIdata& mpi, fftwPlans& fft);
 // Initialize solutions
 void Initialize_Solutions(dcmplxVec *MF, dcmplxMat* Ckl, Model* fluidEqs);
 

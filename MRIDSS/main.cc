@@ -54,7 +54,7 @@ int main(int argc, char ** argv)
 
     
     // Intitial conditions
-    InitialConditions(MF, Ckl, fluidEqs,  mpi, fft); //can be changed by reading from FINAL_STATE
+    InitialConditions(MF, Ckl, SP, fluidEqs,  mpi, fft); //can be changed by reading from FINAL_STATE
     
     // Load from FINAL_STATE if specified in input file
     if (SP.start_from_saved_Q) {
@@ -81,6 +81,7 @@ int main(int argc, char ** argv)
     // Main loop
     for (int i = SP.i_start+1; i < SP.nsteps+1; i++) {
         integrator->Step(t, MF, Ckl);
+        ShearingBox_Continuous_Remap(SP.q*t,fluidEqs, Ckl);
         t = t + SP.dt;
         
         
@@ -95,13 +96,13 @@ int main(int argc, char ** argv)
             CheckSolution(MF, Ckl, fft);
         }
         
-        if (i%SP.num_before_remap == 0) {
-            ShearingBox_Remap(fluidEqs, Ckl);
-            t=0.0;
-            std::stringstream remp;
-            remp << "<<<< Remapping >>>>" << std::endl;
-            //mpi.print1( remp.str() );
-        }
+//        if (i%SP.num_before_remap == 0) {
+//            ShearingBox_Remap(fluidEqs, Ckl);
+//            t=0.0;
+//            std::stringstream remp;
+//            remp << "<<<< Remapping >>>>" << std::endl;
+//            //mpi.print1( remp.str() );
+//        }
         
         
         // Full save of all data

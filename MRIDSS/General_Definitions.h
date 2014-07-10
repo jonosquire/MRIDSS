@@ -78,6 +78,10 @@ typedef Eigen::Array<dcmplx, Eigen::Dynamic, 1> dcmplxVec;
 typedef Eigen::Matrix<dcmplx, Eigen::Dynamic, 1> dcmplxVecM; // vec for eigen matrix object - used for .asDiagonal objects
 typedef Eigen::Array<double, Eigen::Dynamic, 1> doubVec;// For use in linear part
 
+// Saving Ckl
+typedef std::complex<float> Ckl_storage; // For saving Ckl (kept general for backwards compatibility)
+typedef Eigen::Matrix<Ckl_storage, Eigen::Dynamic, Eigen::Dynamic> Ckl_storage_mat;
+
 //////////////////////////////////////////////////
 
 

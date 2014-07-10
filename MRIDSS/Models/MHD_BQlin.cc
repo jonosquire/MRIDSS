@@ -57,7 +57,7 @@ fft_(fft) // FFT data
     mult_noise_fac_ = mult_noise_fac_*mult_noise_fac_;
     
     // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
-    dont_drive_ky0_modes_Q_ = 1;
+    dont_drive_ky0_modes_Q_ = 0;
     
     ////////////////////////////////////////////////////
     // Useful arrays to save computation
@@ -201,7 +201,12 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         
         ////////////////////////////////////////
         //              FORM Qkl              //
-        if (kytmp_==0 && kxtmp_==0) {
+        
+        bool Qkl_Zero_Q = kytmp_==0 && kxtmp_==0; // Whether Qkl  should be zero for this mode
+        if (dont_drive_ky0_modes_Q_ && kytmp_==0)
+            Qkl_Zero_Q = 1;  // Option in the code, set to zero for all ky=0 modes if set
+        
+        if (Qkl_Zero_Q) {
             Qkl_tmp_.setZero(); // Don't drive the mean components! (really could leave mean cmpts out entirely)
             ilapFtmp_(0) = 1; // Avoid infinities (lap2 already done, since stored)
         }
@@ -211,23 +216,6 @@ void MHD_BQlin::rhs(double t, double dt_lin,
             if (kytmp_==0.0) { // Don't drive the ky=kz=0 component (variables not invertible)
                 lapFtmp_(0)=0;
             }
-//            /////////////   DEBUGING ////////////////
-//            /////      TO DELETE     ////////////////
-//            int kxkycut = reference_NXNY_/2-1;
-//            double kxmax = 2*PI/L_[0]*kxkycut, kymax = 2*PI/L_[1]*kxkycut;
-//            if (fabs(kxtmp_ - q_*t*kytmp_) > kxmax || fabs(kytmp_) > kymax) {
-//                lapFtmp_.setZero();
-//                lap2tmp_.setZero();
-//            }
-//            int kzcut = reference_NZ_/2-1;
-//            double kzmax = 2*PI/L_[2]*kzcut;
-//            for (int i=0; i<NZ_; ++i) {
-//                if (abs(kz_(i)) > kzmax) {
-//                    lapFtmp_(i) = 0;
-//                    lap2tmp_(i) = 0;
-//                }
-//            }
-//            ////////////////
             
             Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
             Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
@@ -355,7 +343,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         
         
 
-    if (QL_YN_) {
+//    if (QL_YN_) { Since I almost always want the Reynolds stress in a linear calculation better to still calculate and only change the MF feedback
         ///////////////////////////////////////////////////////////
         //////                                               //////
         //////             REYNOLDS STRESSES                 //////
@@ -420,26 +408,10 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         bzuy_m_uzby_d_ -= ftfac*(reynolds_mat_tmp_.diagonal().array().real());
         
         
-        ////////////// DEBUGGING - DELETE!!!! ///////
-//        double Cklsum = Ckl_in[i].array().real().sum()/(Nxy_[0]*2*Nxy_[1])/(Nxy_[0]*2*Nxy_[1]);
-//        if ( Cklsum>1e-8 ) {
-//            std::cout << "kx = " << (kxtmp_- q_*t*kytmp_)/(2*PI) << ", ky = " << kytmp_/(2*PI) << std::endl;
-//            std::cout << Cklsum << std::endl;
-//        }
-        
-        
-        
-//        bzux_m_uzbx_c_ =ftfac*(reynolds_mat_tmp_.diagonal().array());
-//        fft_.for_1D(bzux_m_uzbx_c_.data());
-//        if ( bzux_m_uzbx_c_.abs().sum()>1e-8 ) {
-//            std::cout << "kx = " << (kxtmp_- q_*t*kytmp_)/(2*PI) << ", ky = " << kytmp_/(2*PI) << std::endl;
-//            std::cout << 1000000*bzux_m_uzbx_c_.transpose()/NZ_/(Nxy_[0]*2*Nxy_[1])/(Nxy_[0]*2*Nxy_[1]) << std::endl;
-//        }
-        ////////////// DEBUGGING - DELETE!!!! ///////
         
         //////                                               //////
         ///////////////////////////////////////////////////////////
-    }
+    
         
         /////////////////////////////////////////
         //    Multiply to get RHS              //
@@ -491,7 +463,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
 
         
     }
-    if (QL_YN_) {
+//    if (QL_YN_) { Since I almost always want the Reynolds stress in a linear calculation better to still calculate and only change the MF feedback
         //////////////////////////////////////
         // Reynolds stress
         // Sum accross all processes
@@ -517,46 +489,26 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         dealias(bzux_m_uzbx_c_);
         dealias(bzuy_m_uzby_c_);
         //////////////////////////////////////
-    } else { // Set Reynolds stress to zero
-        bzux_m_uzbx_c_.setZero();
-        bzuy_m_uzby_c_.setZero();
-    }
-//    std::cout << "kx = " << kxtmp_-q_*dt_lin*kytmp_ << ", ky = " << kytmp_ << std::endl;
-//    for (int i=0; i<NZ_; ++i) {
-//        
-//        if (fabs(imag(bzux_m_uzbx_c_(i)))<1e-15) {
-//            bzux_m_uzbx_c_(i).imag(0);
-//        }
-//        if (fabs(real(bzux_m_uzbx_c_(i)))<1e-15) {
-//            bzux_m_uzbx_c_(i).real(0);
-//        }
-//        if (fabs(imag(bzuy_m_uzby_c_(i)))<1e-15) {
-//            bzuy_m_uzby_c_(i).imag(0);
-//        }
-//        if (fabs(real(bzuy_m_uzby_c_(i)))<1e-15) {
-//            bzuy_m_uzby_c_(i).real(0);
-//        }
-//        
+//    } else { // Set Reynolds stress to zero
+//        bzux_m_uzbx_c_.setZero();
+//        bzuy_m_uzby_c_.setZero();
 //    }
-//
-//    std::cout << bzux_m_uzbx_c_.transpose() << std::endl;
-//    std::cout << bzuy_m_uzby_c_.transpose() << std::endl;
-//
+
+    
     //////////////////////////////////////
     ////   MEAN FIELDS    ////////////////
     // In some integrators MFout will be the same as MFin.
     // Because of this, important to calculate MFout[1] first, since it depends on MFin[1], and this would be updated otherwise
     // Changed this, should be safer now
     
-    // DELETE!!
-//    std::stringstream print_stream;
-//    print_stream << bzuy_m_uzby_c_.transpose()/NZ_ << std::endl;
-//    mpi_.print1(print_stream.str());
+    if (QL_YN_) {
+        MFout[1] = -q_*MFin[0] + bzuy_m_uzby_c_;
+        MFout[0] = bzux_m_uzbx_c_;
+    } else { // Still calculate Reynolds stress in linear calculation
+        MFout[1] = -q_*MFin[0];
+        MFout[0].setZero();
+    }
     
-    
-    
-    MFout[1] = -q_*MFin[0] + bzuy_m_uzby_c_;
-    MFout[0] = bzux_m_uzbx_c_;
     
     
 
@@ -798,7 +750,8 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
             rey_point[2] = eta_ *kz2_(1)*abs(MFin[1](1) );
             rey_point[3] = real(bzux_m_uzbx_c_(1)*conj(MFin[0](1)))/abs(MFin[0](1) );
             rey_point[4] = eta_ * kz2_(1)*abs(MFin[0](1) );
-
+//            rey_point[0] = real(bzuy_m_uzby_c_(1)*conj(MFin[1](1))) ;
+//            rey_point[1] = real(bzux_m_uzbx_c_(1)*conj(MFin[1](1))) ;
             //
             //////////////////////////////////////
         }

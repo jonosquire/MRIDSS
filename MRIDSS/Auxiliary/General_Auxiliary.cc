@@ -38,6 +38,29 @@ void ShearingBox_Remap(Model* mod, dcmplxMat* Ckl){
 }
 
 
+// Remapping for the shearing box
+// Using the Lithwick method of continuously remapping wavenumbers when they become too large
+void ShearingBox_Continuous_Remap(double qt, Model* mod, dcmplxMat* Ckl){
+    // FRIEND TO THE MODEL CLASS -THIS CHANGES THE kx_ array
+    double kxLfac=2*PI/mod->box_length(0);
+    int nx = mod->Nxy_[0];
+    
+    dcmplx * kxp = mod->kx_pointer();// Pointer to kxp data
+    for (int i=0; i<mod->Cdimxy(); ++i) {
+        // Find new kx vector
+        // This will become different on each processor even though each is storing the whole array. This is a little strange but probably inconsequential (aside from slight memory usage).
+        int k_i = i + mod->index_for_k_array(); // Index in kx_, ky_ for each process
+        double kxt = kxp[k_i].imag() + qt*(mod->ky_pointer()[k_i]).imag();
+        if (kxt > nx/2*kxLfac) {
+            // Put kx back in correct range
+            kxp[k_i] = kxp[k_i] - dcmplx(0,nx*kxLfac);
+            // zero out Ckl
+            Ckl[i].setZero();
+        }
+    }
+}
+
+
 
 //////////////////////////////////////////////////////////
 //              CHECK SOLUTION IS OK                    //
@@ -132,9 +155,11 @@ void Save_Full_Data_for_Restart(Model* fluidEqs, Inputs& SP, MPIdata& mpi, doubl
     for (int i=0; i<fluidEqs->num_MFs(); ++i) {
         final_state_file.write( (char *) MF[i].data() , sizeof(dcmplx)*(fluidEqs->MFdimz()) );
     }
-    // Ckl
+    // Ckl - change to single before saving
+    Ckl_storage_mat Ckl_single(fluidEqs->Cdimz(), fluidEqs->Cdimz());
     for (int i=0; i<fluidEqs->Cdimxy(); ++i) {
-        final_state_file.write( (char *) Ckl[i].data() , sizeof(dcmplx)*(fluidEqs->Cdimz())*(fluidEqs->Cdimz()) );
+        Ckl_single = Ckl[i].cast<Ckl_storage>();
+        final_state_file.write( (char *) Ckl_single.data() , sizeof(Ckl_storage)*(fluidEqs->Cdimz())*(fluidEqs->Cdimz()) );
     }
     final_state_file.close();
 }
@@ -214,8 +239,11 @@ void Load_Full_Data_for_Restart(Model* fluidEqs, Inputs& SP, MPIdata& mpi, dcmpl
             final_state_file.read( (char *) MF[i].data() , sizeof(dcmplx)*(fluidEqs->MFdimz()) );
         }
         // Ckl
+        Ckl_storage_mat Ckl_single(fluidEqs->Cdimz(), fluidEqs->Cdimz());
         for (int i=0; i<fluidEqs->Cdimxy(); ++i) {
-            final_state_file.read( (char *) Ckl[i].data() , sizeof(dcmplx)*(fluidEqs->Cdimz())*(fluidEqs->Cdimz()) );
+            final_state_file.read( (char *) Ckl_single.data() , sizeof(Ckl_storage)*(fluidEqs->Cdimz())*(fluidEqs->Cdimz()) );
+            Ckl[i] = Ckl_single.cast<dcmplx>();
+            
         }
         final_state_file.close();
     }

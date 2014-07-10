@@ -64,6 +64,9 @@ public:
     bool reynolds_save_Q;
     bool mean_field_save_Q;
     
+    // Initial conditions
+    double initial_By;
+    
     // Start using saved data
     bool start_from_saved_Q;
     

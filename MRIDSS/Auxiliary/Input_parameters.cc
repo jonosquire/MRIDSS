@@ -102,6 +102,10 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
         
         mean_field_save_Q = Read_From_Input_File_<bool>("mean_field_save?", fullfile, 1);
         
+        // Initial conditions
+        // Initial By, multiplying cos(k_z(1) z). If set to negative, uses random noise (multiplied by specified number)
+        initial_By = Read_From_Input_File_<double>("initial_By_",fullfile, 1e-7);
+        
         // Restarting simulation
         start_from_saved_Q = Read_From_Input_File_<bool>("start_from_saved?", fullfile, 0);
         // If True, takes step, time, and data from FINAL_CKL_STATE_Proc#

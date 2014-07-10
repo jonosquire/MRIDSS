@@ -18,6 +18,8 @@
 
 void ShearingBox_Remap(Model* mod, dcmplxMat* Ckl);
 
+void ShearingBox_Continuous_Remap(double qt, Model *mod, dcmplxMat* Ckl);
+
 // Check aspects of the solution
 void CheckSolution(dcmplxVec* MF, dcmplxMat* Ckl, fftwPlans& fft);
 

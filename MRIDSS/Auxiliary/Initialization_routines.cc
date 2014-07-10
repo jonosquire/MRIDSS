@@ -24,7 +24,7 @@ void Initialize_Solutions(dcmplxVec *MF, dcmplxMat* Ckl,Model* fluidEqs) {
 
 
 // Initial conditions - outputs in Fourier space
-void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Model* equations, MPIdata& mpi, fftwPlans& fft){
+void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Inputs SP, Model* equations, MPIdata& mpi, fftwPlans& fft){
 //    // Generate random distribution
 //    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 //    std::default_random_engine generator(seed);
@@ -88,21 +88,26 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Model* equations, MPIdata
 //    }
 
     // Assign to mean fields
-    double LZ = equations->box_length(3);
     doubVec zg = doubVec::LinSpaced( MF[0].size(), 0, 2*PI*(1.0-1.0/MF[0].size()) );
-    // Sets it to the lowest mode in the box
-    MF[0].setZero();
-    for (int i=0; i<MF[0].size(); ++i) {
-        MF[1](i) = (dcmplx) 0.01*cos( zg(i) );//+0.01*cos( 2*zg(i) );
-    }
-//    // Sets to random in Bx and By
-//    double mult_fac[2] = {1e-7,1e-6};
-//    for (int i=0; i<numMF; ++i) {
-//        MF[i].real().setRandom();
-//        MF[i].imag().setZero();
-//        MF[i] *= mult_fac[i];
-//    }
+    
+    // Decide what MF initial conditions based on SP.initial_By
+    if (SP.initial_By > 0.0) { // Lowest Kz mode in the box, amplitude from SP.initial_By
+        MF[0].setZero();
+        for (int i=0; i<MF[0].size(); ++i) {
+            MF[1](i) = (dcmplx) SP.initial_By*cos( zg(i) );
+        }
+    } else { // Sets to random in Bx and By, amplitude from SP.initial_By
+        // Sets to random in Bx and By
+        double mult_fac[2] = {-SP.initial_By, -0.1*SP.initial_By};
+        for (int i=0; i<numMF; ++i) {
+            MF[i].real().setRandom();
+            MF[i].imag().setZero();
+            MF[i] *= mult_fac[i];
+        }
 
+    }
+
+    // Take the Fourier transform
     for (int i=0; i<numMF; ++i) {
         fft.for_1D(MF[i].data());
     }
