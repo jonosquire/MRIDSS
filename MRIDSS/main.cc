@@ -96,13 +96,13 @@ int main(int argc, char ** argv)
             CheckSolution(MF, Ckl, fft);
         }
         
-//        if (i%SP.num_before_remap == 0) {
-//            ShearingBox_Remap(fluidEqs, Ckl);
-//            t=0.0;
-//            std::stringstream remp;
-//            remp << "<<<< Remapping >>>>" << std::endl;
-//            //mpi.print1( remp.str() );
-//        }
+        if (i%SP.num_before_remap == 0) {
+            ShearingBox_Remap(fluidEqs, Ckl);
+            t=0.0;
+            std::stringstream remp;
+            remp << "<<<< Remapping >>>>" << std::endl;
+            //mpi.print1( remp.str() );
+        }
         
         
         // Full save of all data
