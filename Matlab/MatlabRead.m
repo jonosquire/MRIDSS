@@ -8,7 +8,7 @@ data_dir = 'ClusterData/';
 % data_dir = 'MRIDSS/Data/';
 noise =5;Rm=4000;Pm=4;By = 0.;
 run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
-run_dir  = 'HiRes_Rm8000Noise4Pm4/';
+run_dir  = 'HiRes_Rm8000Noise4Pm2/';
 % run_dir = ['CheckNoise' n2s(noise) '_Rm' n2s(Rm) 'Pm' n2s(Pm) '/'];
 % run_dir = 'SW_test/';
 
@@ -25,6 +25,7 @@ fid_time = fopen([base_dir data_dir run_dir 'time_vec.dat']);
 
 % Read time vector and simulation length
 time = fread(fid_time, inf ,'double');
+% time=time(1:512);
 sim_len= length(time);
 
 figure
@@ -52,6 +53,7 @@ legend('Shear term','B_y emf','B_y dissipation','10*B_x emf','10*B_x dissipation
 
 % Mean fields;
 tmp = fread(fid_MF , inf ,'double');
+% tmp = fread(fid_MF , MFdim*numMF*sim_len ,'double');
 if length(tmp)~=MFdim*numMF*sim_len
     error('Number of NF elements does not match up');
 end
@@ -61,10 +63,10 @@ for ii=0:numMF-1
     MFmax{ii+1} = max(abs(MF{ii+1}));
 end
 subplot(311);
-htime = floor(length(time));
+htime = floor(length(time))*0.85;
 % plot(time(1:htime), log10(MFmax{2}(1:htime)),time(1:htime), log10(MFmax{1}(1:htime)))
-plot( linspace(0,2*pi,MFdim), MF{2}(:,1),linspace(0,2*pi,MFdim), MF{1}(:,1) )
-contourf(time(1:htime), linspace(0,2*pi,MFdim),MF{2},20,'Linestyle','none')
+plot( linspace(0,2*pi,MFdim), MF{2}(:,end),linspace(0,2*pi,MFdim), MF{1}(:,end) )
+contourf(time(1:htime), linspace(0,2*pi,MFdim),MF{2}(:,1:htime),20,'Linestyle','none')
 colorbar;
 title(['Pm = ' num2str(Pm) ' By = ' num2str(By)])
 % for kk=1:130

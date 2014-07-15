@@ -1,14 +1,14 @@
-function turbulent_res = ReadCklData()
+function  ReadCklData()
 
 % Reads in data from FINAL_CKL_STATE_Proc# into a convenient Matlab format
 % Can also convert to a different number of processors 
 n2s = @(str) strrep(num2str(str),'.','');
 
 processed_data_Q=0;
-ckl_format = 'float';
+ckl_format = 'double';
 base_dir='/Users/jsquire/Documents/MRIDSS/';
 data_dir = 'MRIDSS/Data/';
-% data_dir = 'ClusterData/';
+data_dir = 'ClusterData/RmScan/';
 final_state_dir = 'FINAL_STATE/';
 
 turbulent_res = [];
@@ -19,7 +19,8 @@ turbulent_res = [];
 noise =3;Rm=8000;Pm=2;
 run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
 % run_dir = ['CheckNoise' n2s(noise) '_Rm' n2s(Rm) 'Pm' n2s(Pm) '/'];
-% run_dir = 'CheckNoise5_Rm5000Pm4/';
+run_dir = 'Noise1_Rm5000Pm8/';
+
 
 
 if ~processed_data_Q
@@ -98,36 +99,37 @@ if ~processed_data_Q
     ky = repmat(ky,[1, N(1)-1]);
     ky = reshape(ky,[nxy_pproc numprocs]).';
     % Fix kx as read
-    read_kx = round(cell2mat(my_kx_cell)/(2i*pi/L(1)));
+    read_kx_init = round(cell2mat(my_kx_cell)/(2i*pi/L(1)));
+    read_kx = mod(read_kx_init+N(1)/2-1,N(1)-1)-(N(1)/2-1); % With new remapping kx gets smaller continuously, 
+    % this mod shouldn't affect read_kx from old data
+    
 
     % % kx at the current time to match up with read values
     % read_kx = cell2mat(my_kx_cell)/(2i*pi/L(1));
     % kxmat = reshape(kx,[numprocs, nxy_pproc])/(2i*pi/L(1));
     % kymat = reshape(ky,[numprocs, nxy_pproc])/(2i*pi/L(2));
     Cdimz = N(3)*numFluct;
-    Ckl = zeros(Cdimz,Cdimz,N(1),N(2)/2);
+    Ckl = zeros(Cdimz,Cdimz,N(1)-1,N(2)/2);
 
-    nx_array = [0:(N(1)/2-1) -N(1)/2:-1];
+    nx_array = [0:(N(1)/2-1) -N(1)/2+1:-1];
     ny_array = 0:(N(2)/2-1);
+    kx_array = zeros(N(1)-1,N(2)/2); % Store the original version of kx as read from file
     rowcol_stor = []; % For error checking
     % Loop through and find matching pair
-    for xxx = 1:N(1)
+    for xxx = 1:N(1)-1
         for yyy = 1:N(2)/2
-            % Don't include the nyquist frequency
-            if xxx ~= N(1)/2+1
-                % Find row (proc number) and column (kx index inside proc)
-                [row,col]=find(read_kx==nx_array(xxx) & ky==ny_array(yyy));
-                if isempty(row) || isempty(col)
-                    warning(['kx = ' num2str(nx_array(xxx)) ', ky = ' num2str(ny_array(yyy)) ...
-                        ' not found in read kx data!!']);
-                elseif  length(row)>1 || length(col)>1
-                    warning(['kx = ' num2str(nx_array(xxx)) ', ky = ' num2str(ny_array(yyy)) ...
-                        ' not found more than once!!']);
-                else
-                    Ckl(:,:,xxx,yyy) = reshape(Ckl_cell{row}(:,col),[Cdimz Cdimz]);
-                    rowcol_stor = [rowcol_stor; [row col]]; 
-                end
-
+            % Find row (proc number) and column (kx index inside proc)
+            [row,col]=find(read_kx==nx_array(xxx) & ky==ny_array(yyy));
+            if isempty(row) || isempty(col)
+                warning(['kx = ' num2str(nx_array(xxx)) ', ky = ' num2str(ny_array(yyy)) ...
+                    ' not found in read kx data!!']);
+            elseif  length(row)>1 || length(col)>1
+                warning(['kx = ' num2str(nx_array(xxx)) ', ky = ' num2str(ny_array(yyy)) ...
+                    ' found more than once!!']);
+            else
+                Ckl(:,:,xxx,yyy) = reshape(Ckl_cell{row}(:,col),[Cdimz Cdimz]);
+                kx_array(xxx,yyy) = read_kx_init(row,col);
+                rowcol_stor = [rowcol_stor; [row col]]; 
             end
         end
     end
@@ -147,13 +149,19 @@ if ~processed_data_Q
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % Calculate kx ky kz
-    K.KX = (2i*pi/P.lx)*fftshift(-P.nx/2:P.nx/2-1)';
     K.KY = (2i*pi/P.ly)*(0:P.ny/2-1)';
+    K.kx_array = bsxfun(@plus,(2i*pi/L(1))*kx_array,P.q*t*K.KY.');
     K.KZ = (2i*pi/P.lz)*fftshift(-P.nz/2:P.nz/2-1)';
 
+    % Put the ks in order
+    [K.kx_array, reord]=sort(imag(K.kx_array),1);
+    K.kx_array = 1i*K.kx_array;
+    for kk=1:P.nx-1
+        Ckl(:,:,:,kk)=Ckl(:,:,reord(:,kk)',kk);
+    end
 
     % Energy
-    energy=solEnergy(t,P,K,Ckl);
+    energy=solEnergy(P,K,Ckl);
     % Reynolds stress
     [bzuxmuzbx,bzuymuzby] = ReynoldsStresses(t,P,K,Ckl);
 
@@ -165,25 +173,41 @@ end
 
 
 
-kz1_Bx = reshape(real(bzuxmuzbx(2,:,:)),[P.nx,P.ny/2]);
-kz1_By = reshape(real(bzuymuzby(2,:,:)),[P.nx,P.ny/2]);
+kz1_Bx = reshape(real(bzuxmuzbx(2,:,:)),[P.nx-1,P.ny/2]);
+kz1_By = reshape(real(bzuymuzby(2,:,:)),[P.nx-1,P.ny/2]);
 
 
 figure
-for kk=1:P.ny/2 % Create legend for each ky
+cmap = colormap;cvec = 0:1/64:1-1/64;
+plotnum = P.ny/8;
+for kk=1:plotnum % Create legend for each ky
     legendstr{kk} = ['ky = ' num2str(imag(K.KY(kk)))];
+    colorlist{kk} = interp1(cvec,cmap,(kk-1)/plotnum);
 end
-legendstr{kk+1}='Total';
-subplot(211)
-plot(fftshift(imag(K.KX)),-fftshift(kz1_Bx,1),fftshift(imag(K.KX)),-sum(fftshift(kz1_Bx,1),2),'k')
-title(['Pm = ' num2str(Pm) ' B_y = ' num2str(By) char(10) '  x reynolds stress'])
-xlabel('k_x')
-legend(legendstr);
-subplot(212)
-plot(fftshift(imag(K.KX)),fftshift(kz1_By,1),fftshift(imag(K.KX)),sum(fftshift(kz1_By,1),2),'k')
-title(['y reynolds stress' char(10) num2str(sum(sum(fftshift(kz1_By))))])
-xlabel('k_x')
+% legendstr{kk+1}='Total';
 
+for yyy=1:plotnum
+    subplot(211)
+    hold on
+    plot(imag(K.kx_array(:,yyy)),-kz1_Bx(:,yyy),'o-','Color',colorlist{yyy},'MarkerEdgeColor',colorlist{yyy},'MarkerFaceColor',colorlist{yyy});
+    title(['Pm = ' num2str(Pm) ' B_y = ' num2str(By) char(10) '  x reynolds stress'])
+    xlabel('k_x')
+    subplot(212)
+    hold on
+    plot(imag(K.kx_array(:,yyy)),kz1_By(:,yyy),'o-','Color',colorlist{yyy},'MarkerEdgeColor',colorlist{yyy},'MarkerFaceColor',colorlist{yyy});
+    title(['y reynolds stress' char(10) num2str(sum(sum(kz1_By)))])
+    xlabel('k_x')
+end
+legend(legendstr)
+% subplot(211)
+% plot(fftshift(imag(K.KX)),-fftshift(kz1_Bx,1),fftshift(imag(K.KX)),-sum(fftshift(kz1_Bx,1),2),'k')
+% title(['Pm = ' num2str(Pm) ' B_y = ' num2str(By) char(10) '  x reynolds stress'])
+% xlabel('k_x')
+% legend(legendstr);
+% subplot(212)
+% plot(fftshift(imag(K.KX)),fftshift(kz1_By,1),fftshift(imag(K.KX)),sum(fftshift(kz1_By,1),2),'k')
+% title(['y reynolds stress' char(10) num2str(sum(sum(fftshift(kz1_By))))])
+% xlabel('k_x')
 % turbulent_res = [turbulent_res [By;sum(sum(fftshift(kz1_Bx)));sum(sum(fftshift(kz1_By)))]];
 
 % figure
@@ -256,14 +280,19 @@ function [bzuxmuzbx,bzuymuzby] = ReynoldsStresses(t,P,K,Ckl)
 
 % To account for having half of a ky grid 
 mfac=[1;2*ones(P.ny/2-1,1)];
-bzuxmuzbx = zeros(P.nz,P.nx,P.ny/2);
-bzuymuzby = zeros(P.nz,P.nx,P.ny/2);
+bzuxmuzbx = zeros(P.nz,P.nx-1,P.ny/2);
+bzuymuzby = zeros(P.nz,P.nx-1,P.ny/2);
 
+kxfac = (2i*pi/P.lx);
 for yyy=1:P.ny/2
-    for xxx=1:P.nx
+    for xxx=1:P.nx-1
         % Various k values and matrices
         ky=K.KY(yyy);
-        kxt=K.KX(xxx)+P.q*t*ky;
+%         kxt=K.KX(xxx)+P.q*t*ky;
+%         kxt = kxfac*(mod(kxt/kxfac+P.nx/2,P.nx)-P.nx/2);
+        kxt = K.kx_array(xxx,yyy);
+        % Fix for the new remapping style, mod back to -nx/2->nx/2
+        
         % Form laplacians
         lap2=ky^2 + K.KZ.^2;
         lapF=ky^2+kxt^2+K.KZ.^2;
@@ -298,7 +327,7 @@ end
 end
 
 
-function energy=solEnergy(t,P,K,Ckl)
+function energy=solEnergy(P,K,Ckl)
 
 energy=zeros(P.nx,P.ny/2);
 % Calcuates the energy of Ckl solution
@@ -306,21 +335,16 @@ if sum(sum(abs(Ckl(:,:,1,1))))>1e-10
     warning('Energy in kx=ky=0 fluctuation tensor')
 end
 
-KX = K.KX;
-KY=K.KY;
-KZ=K.KZ;
-
-
 mfac=[1;2*ones(P.ny/2-1,1)];
 
 for yyy=1:P.ny/2
-    for xxx=1:P.nx
+    for xxx=1:P.nx-1
         % Various k values and matrices
-        ky=KY(yyy);
-        kxt=KX(xxx)+P.q*t*ky;
+        ky=K.KY(yyy);
+        kxt = K.kx_array(xxx,yyy);
         % Form laplacians
-        lap2=ky^2 + KZ.^2;
-        lapF=ky^2+kxt^2+KZ.^2;
+        lap2=ky^2 + K.KZ.^2;
+        lapF=ky^2+kxt^2+K.KZ.^2;
         if ky==0
             lap2(1)=1;% Shouldn't be energy in this mode anyway
         end
@@ -349,5 +373,7 @@ ckl_xy = ifft2(fftshift(fftshift(xyFourier,1)))'; % Transpose so it fits in stan
 xg = linspace(-P.lx/2,P.lx/2,P.nx);
 yg = linspace(-P.ly/2,P.ly/2,P.ny);
 end
+
+
 
 

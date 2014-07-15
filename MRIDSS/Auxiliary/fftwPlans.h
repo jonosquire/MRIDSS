@@ -49,6 +49,10 @@ public:
         fftw_execute_dft(t1D_back_,CAST_T0_FFTW(MFin),CAST_T0_FFTW(MFin));
     };
     
+    
+    void for_2DFull(dcmplxMat& Cin);
+    void back_2DFull_noNZ(dcmplxMat& Cin);
+    void back_2DFull(dcmplxMat& Cin);
     /////////////////////////////////////////////////////
     
     

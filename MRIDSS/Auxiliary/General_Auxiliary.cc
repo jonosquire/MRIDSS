@@ -43,14 +43,17 @@ void ShearingBox_Remap(Model* mod, dcmplxMat* Ckl){
 void ShearingBox_Continuous_Remap(double qt, Model* mod, dcmplxMat* Ckl){
     // FRIEND TO THE MODEL CLASS -THIS CHANGES THE kx_ array
     double kxLfac=2*PI/mod->box_length(0);
-    int nx = mod->Nxy_[0];
+    int nx = mod->Nxy_[0]-1;
     
-    dcmplx * kxp = mod->kx_pointer();// Pointer to kxp data
+    dcmplx * kxp = mod->kx_pointer();// Pointer to kx data
+    dcmplx * kyp = mod->ky_pointer();// Pointer to ky data
+    int k_i;
+    double kxt;
     for (int i=0; i<mod->Cdimxy(); ++i) {
         // Find new kx vector
         // This will become different on each processor even though each is storing the whole array. This is a little strange but probably inconsequential (aside from slight memory usage).
-        int k_i = i + mod->index_for_k_array(); // Index in kx_, ky_ for each process
-        double kxt = kxp[k_i].imag() + qt*(mod->ky_pointer()[k_i]).imag();
+        k_i = i + mod->index_for_k_array(); // Index in kx_, ky_ for each process
+        kxt = kxp[k_i].imag() + qt*kyp[k_i].imag();
         if (kxt > nx/2*kxLfac) {
             // Put kx back in correct range
             kxp[k_i] = kxp[k_i] - dcmplx(0,nx*kxLfac);

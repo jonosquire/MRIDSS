@@ -130,18 +130,18 @@ void Inputs::initialize_() {
     timevar_save_nsteps = round(timvar_save_interval/dt);
     fullsol_save_nsteps = round(fullsol_save_interval/dt);
     
-    // Shearing box
+    // Shearing box - THIS ISN'T USED WITH NEW REMAP METHOD
     num_before_remap = 2*nsteps; // If no remap
-    if (remapQ) {
-        TSB = L[1]/L[0]/q;
-        // Test for an integer number of steps
-        if (fabs(TSB/dt-round(TSB/dt)) > 1e-10) {
-            if (mpi_node_== 0){
-                std::cout << "Warning, non-integer number of steps before remapping: " << TSB/dt <<std::endl;
-            }
-        }
-        num_before_remap = round(TSB/dt);
-    }
+//    if (remapQ) {
+//        TSB = L[1]/L[0]/q;
+//        // Test for an integer number of steps
+//        if (fabs(TSB/dt-round(TSB/dt)) > 1e-10) {
+//            if (mpi_node_== 0){
+//                std::cout << "Warning, non-integer number of steps before remapping: " << TSB/dt <<std::endl;
+//            }
+//        }
+//        num_before_remap = round(TSB/dt);
+//    }
 }
 
 

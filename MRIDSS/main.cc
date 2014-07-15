@@ -64,7 +64,7 @@ int main(int argc, char ** argv)
     // Set up time variables -- energy, engular momentum etc.
     TimeVariables time_vars(SP, 4, fluidEqs->num_MFs(), 5, mpi.my_n_v());
     
-    double t=SP.t_start; // Initial time
+    double t=SP.t_start ; // Initial time
 
     // Set up integration scheme
     Integrator *integrator = new EulerCN(t, SP.dt, *fluidEqs);
@@ -81,9 +81,9 @@ int main(int argc, char ** argv)
     // Main loop
     for (int i = SP.i_start+1; i < SP.nsteps+1; i++) {
         integrator->Step(t, MF, Ckl);
-        ShearingBox_Continuous_Remap(SP.q*t,fluidEqs, Ckl);
-        t = t + SP.dt;
         
+        if (SP.remapQ) // Remap at every step now
+            ShearingBox_Continuous_Remap(SP.q*t,fluidEqs, Ckl);
         
         // Calculate energy, AM, etc.
         if (i%SP.timevar_save_nsteps==0){
@@ -96,19 +96,22 @@ int main(int argc, char ** argv)
             CheckSolution(MF, Ckl, fft);
         }
         
-        if (i%SP.num_before_remap == 0) {
-            ShearingBox_Remap(fluidEqs, Ckl);
-            t=0.0;
-            std::stringstream remp;
-            remp << "<<<< Remapping >>>>" << std::endl;
-            //mpi.print1( remp.str() );
-        }
+//        if (i%SP.num_before_remap == 0) {
+//            ShearingBox_Remap(fluidEqs, Ckl);
+//            t=0.0;
+//            std::stringstream remp;
+//            remp << "<<<< Remapping >>>>" << std::endl;
+//            //mpi.print1( remp.str() );
+//        }
         
         
         // Full save of all data
         if (i%SP.fullsol_save_nsteps ==0) {
         //    std::cout << "Saving data, step " << i << std::endl;
         };
+        
+        t = t + SP.dt;
+
         
     }
 

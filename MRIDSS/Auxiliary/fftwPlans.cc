@@ -30,9 +30,9 @@ void fftwPlans::calculatePlans( int NZ ) {
     dcmplxVec MF_tmp1( NZ );
     dcmplx * MF_p1 = MF_tmp1.data();
     
-    
+
     ////////////////////////////////////////////////
-    //     2D PLANS - full data for Reynold's stress
+    //     2D PLANS -  Reynold's stress
     //
     // Need fft(fft( Ckl )')' (in Matlab notation), while standard 2-D fft is
     // fft(fft( Ckl ).').', hence the separate calculation for each dimension.
@@ -99,6 +99,30 @@ fftwPlans::~fftwPlans() {
     
 }
 
+// Full 2-D transform fft(fft(a)')')
+
+void fftwPlans::for_2DFull(dcmplxMat& Cin){
+    for_2D_dim1(Cin.data());
+    Cin = Cin.conjugate();
+    for_2D_dim2(Cin.data());
+    Cin = Cin.conjugate();
+}
+
+void fftwPlans::back_2DFull(dcmplxMat& Cin){
+    double nzm2 = 1.0/(Cin.size() );
+    back_2D_dim1(Cin.data());
+    Cin = Cin.conjugate();
+    back_2D_dim2(Cin.data());
+    Cin = Cin.conjugate()*nzm2;
+}
+
+// Full backwards transform without normalizing by NZ^2
+void fftwPlans::back_2DFull_noNZ(dcmplxMat& Cin){
+    back_2D_dim1(Cin.data());
+    Cin = Cin.conjugate();
+    back_2D_dim2(Cin.data());
+    Cin = Cin.conjugate();
+}
 //                                                 //
 /////////////////////////////////////////////////////
 
