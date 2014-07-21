@@ -56,6 +56,7 @@ public:
     // Dealiasing
     void dealias(dcmplx *arr); // 2-D version - TODO tidy up
     void dealias(dcmplxVec& vec); // 1-D version
+    void dealias(doubVec& vec);
     
     //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation

@@ -212,6 +212,8 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         }
         else {
             lapFtmp_ = lap2tmp_/lapFtmp_; // lapFtmp_ is no longer lapF!!!
+            dealias(lapFtmp_);
+            dealias(lap2tmp_);
             // CANNOT USE AFTER THIS!
             if (kytmp_==0.0) { // Don't drive the ky=kz=0 component (variables not invertible)
                 lapFtmp_(0)=0;
@@ -223,6 +225,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
             
         }
         ////////////////////////////////////////
+        
         
         
         ////////////////////////////////////////
@@ -420,15 +423,34 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         
         // A*C matrix product - rather complicated due to all the submatrices
         
+        
+        
+        //////////DEBUG - DELETE //////////
+        dcmplxMat Ctmp = dcmplxMat(NZ_,NZ_);
+        for (int j=0; j<4; ++j) {
+            for (int k=0; k<4; ++k) {
+                Ctmp = Ckl_in[i].block(j*NZ_,k*NZ_, NZ_, NZ_);
+                dealias(Ctmp.data());
+                Ckl_in[i].block(j*NZ_,k*NZ_, NZ_, NZ_) = Ctmp;
+            }
+        }
+        
+        
         // Block_Matrix_Mult_ updates each given of Ckl_out
         Block_Matrix_Mult_(0, Ckl_in[i], Ckl_out[i]);//COLUMN 0
         Block_Matrix_Mult_(1, Ckl_in[i], Ckl_out[i]);//COLUMN 1
         Block_Matrix_Mult_(2, Ckl_in[i], Ckl_out[i]);//COLUMN 2
         Block_Matrix_Mult_(3, Ckl_in[i], Ckl_out[i]);//COLUMN 3
-        
+    
+//        std::cout << "kx = " << kxtmp_ << ", ky = " << kytmp_ << std::endl;
+//        std::cout << Ckl_out[i].block( 3*NZ_, 0, NZ_, NZ_) << std::endl << std::endl;
         // Add to adjoint
         Ckl_out[i] += Ckl_out[i].adjoint().eval();
 
+//        std::cout << "kx = " << kxtmp_ << ", ky = " << kytmp_ << std::endl;
+//        std::cout << Ckl_out[i] << std::endl << std::endl;
+
+        
         // Add driving noise
         Ckl_out[i] += Qkl_tmp_.cast<dcmplx>().matrix().asDiagonal();
         
@@ -560,6 +582,13 @@ void MHD_BQlin::dealias(dcmplx *arr) {
 }
 //1-D version - takes a dcmplxVec input
 void MHD_BQlin::dealias(dcmplxVec& vec) {
+    for (int j=delaiasBnds_[0]; j<delaiasBnds_[1]+1; ++j){
+        vec(j) = 0;
+    }
+}
+
+//1-D version - takes a doubVec input
+void MHD_BQlin::dealias(doubVec& vec) {
     for (int j=delaiasBnds_[0]; j<delaiasBnds_[1]+1; ++j){
         vec(j) = 0;
     }

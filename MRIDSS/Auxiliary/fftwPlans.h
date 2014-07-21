@@ -51,7 +51,6 @@ public:
     
     
     void for_2DFull(dcmplxMat& Cin);
-    void back_2DFull_noNZ(dcmplxMat& Cin);
     void back_2DFull(dcmplxMat& Cin);
     /////////////////////////////////////////////////////
     

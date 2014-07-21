@@ -5,21 +5,21 @@ function  ReadCklData()
 n2s = @(str) strrep(num2str(str),'.','');
 
 processed_data_Q=0;
-ckl_format = 'double';
+ckl_format = 'float';
 base_dir='/Users/jsquire/Documents/MRIDSS/';
-data_dir = 'MRIDSS/Data/';
-data_dir = 'ClusterData/RmScan/';
+data_dir = 'MRIDSS/Data/LinearBScan/';
+% data_dir = 'ClusterData/RmScan/';
 final_state_dir = 'FINAL_STATE/';
 
 turbulent_res = [];
 
 
 % for By = [0.05:0.01:0.2]
-    By = 0.08;
-noise =3;Rm=8000;Pm=2;
+    By = 0.16;
+noise =3;Rm=8000;Pm=4;
 run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
 % run_dir = ['CheckNoise' n2s(noise) '_Rm' n2s(Rm) 'Pm' n2s(Pm) '/'];
-run_dir = 'Noise1_Rm5000Pm8/';
+% run_dir = 'Noise1_Rm5000Pm8/';
 
 
 
@@ -156,7 +156,7 @@ if ~processed_data_Q
     % Put the ks in order
     [K.kx_array, reord]=sort(imag(K.kx_array),1);
     K.kx_array = 1i*K.kx_array;
-    for kk=1:P.nx-1
+    for kk=1:P.ny/2
         Ckl(:,:,:,kk)=Ckl(:,:,reord(:,kk)',kk);
     end
 
@@ -179,7 +179,7 @@ kz1_By = reshape(real(bzuymuzby(2,:,:)),[P.nx-1,P.ny/2]);
 
 figure
 cmap = colormap;cvec = 0:1/64:1-1/64;
-plotnum = P.ny/8;
+plotnum = P.ny/4;
 for kk=1:plotnum % Create legend for each ky
     legendstr{kk} = ['ky = ' num2str(imag(K.KY(kk)))];
     colorlist{kk} = interp1(cvec,cmap,(kk-1)/plotnum);

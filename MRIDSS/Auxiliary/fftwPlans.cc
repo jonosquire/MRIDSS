@@ -108,16 +108,8 @@ void fftwPlans::for_2DFull(dcmplxMat& Cin){
     Cin = Cin.conjugate();
 }
 
-void fftwPlans::back_2DFull(dcmplxMat& Cin){
-    double nzm2 = 1.0/(Cin.size() );
-    back_2D_dim1(Cin.data());
-    Cin = Cin.conjugate();
-    back_2D_dim2(Cin.data());
-    Cin = Cin.conjugate()*nzm2;
-}
-
 // Full backwards transform without normalizing by NZ^2
-void fftwPlans::back_2DFull_noNZ(dcmplxMat& Cin){
+void fftwPlans::back_2DFull(dcmplxMat& Cin){
     back_2D_dim1(Cin.data());
     Cin = Cin.conjugate();
     back_2D_dim2(Cin.data());

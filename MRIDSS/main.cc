@@ -10,7 +10,7 @@
 
 // Models
 #include "Models/MHD_BQlin.h"
-#include "Models/MHD_BQlin_old.h"
+#include "Models/Model_AutoGen_template.h"
 #include "Models/Constant_Damping.h"
 // Integrators
 #include "Integrators/intEuler.h"
@@ -44,7 +44,7 @@ int main(int argc, char ** argv)
 
     // Construct "model" object
     fftwPlans fft;
-    Model* fluidEqs = new MHD_BQlin(SP, mpi, fft);
+    Model* fluidEqs = new Model_AutoGen_template(SP, mpi, fft);
     const int num_MFs = fluidEqs->num_MFs();
     
     // Initialize solution
@@ -67,7 +67,7 @@ int main(int argc, char ** argv)
     double t=SP.t_start ; // Initial time
 
     // Set up integration scheme
-    Integrator *integrator = new EulerCN(t, SP.dt, *fluidEqs);
+    Integrator *integrator = new RK2CN(t, SP.dt, *fluidEqs);
     
     clock_t start = clock();
     double diff;

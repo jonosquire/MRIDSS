@@ -25,10 +25,10 @@
 // Model class for S3T/CE2 shearing box MHD model
 // Basic Quasi-linear MHD
 // Derived from Model (model.h)
-class MHD_BQlin : public Model {
+class Model_AutoGen_template : public Model {
 public:
-    MHD_BQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
-    ~MHD_BQlin();
+    Model_AutoGen_template(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
+    ~Model_AutoGen_template();
     
     
     // Equations themselves
@@ -54,9 +54,9 @@ public:
     
     
     // Dealiasing
-    void dealias(dcmplx *arr); // 2-D version - TODO tidy up
     void dealias(dcmplxMat &inMat);
     void dealias(dcmplxVec& vec); // 1-D version
+    void dealias(doubVec& vec); // 1-D version
     
     //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation
@@ -97,6 +97,7 @@ private:
     // Sizes for driving and energy
     long totalN2_;
     double mult_noise_fac_; // Factor to multiply noise to get values consistent with previous numbers
+    double fft2Dfac_, fft1Dfac_;
     
     // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
     bool dont_drive_ky0_modes_Q_;
@@ -122,11 +123,6 @@ private:
     // Qkl temporary
     doubVec Qkl_tmp_;
     
-    // Ckl_in submatrices
-    dcmplxMat C11_,C12_,C13_,C14_,
-        C21_,C22_,C23_,C24_,
-        C31_,C32_,C33_,C34_,
-        C41_,C42_,C43_,C44_;
     
     // Real versions of B and derivatives
     dcmplxVecM By_;
@@ -146,6 +142,11 @@ private:
     dcmplxVecM T2Tdz, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzTiLap2Tkxb, TdzTqPLUSTm2Tdz, TiLap2Tky, TmdzTiLap2Tkxb, TmdzTq, TmiLap2Tky;
     
     dcmplx Tky, Tm2TkxbTkyTq, Tmkxb;
+    
+    dcmplxMat Ctmp_1_, Ctmp_2_, Ctmp_3_;
+    
+    dcmplxMat C11_, C12_, C13_, C14_, C21_, C22_, C23_, C24_, C31_, C32_, C33_, C34_, C41_, C42_, C43_, C44_;
+
     
     
     

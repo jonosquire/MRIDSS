@@ -44,6 +44,8 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Inputs SP, Model* equatio
             for (int k=0; k<nz; ++k)
                 Ckl[i](j,k)=dcmplx(0,0);
         }
+        Ckl[i] += Ckl[i].adjoint().eval();
+        
     }
 
 //    // Assign to mean fields

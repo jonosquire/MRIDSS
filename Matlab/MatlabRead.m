@@ -5,14 +5,14 @@ n2s = @(str) strrep(num2str(str),'.','');
 % Reads in data produced by MRIDSS and plots basic things
 base_dir='/Users/jsquire/Documents/MRIDSS/';
 data_dir = 'ClusterData/';
-% data_dir = 'MRIDSS/Data/';
+data_dir = 'MRIDSS/Data/';
 noise =5;Rm=4000;Pm=4;By = 0.;
 run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
-run_dir  = 'HiRes_Rm8000Noise4Pm2/';
+run_dir  = 'HiRes_Rm8000Noise4Pm4/';
 % run_dir = ['CheckNoise' n2s(noise) '_Rm' n2s(Rm) 'Pm' n2s(Pm) '/'];
-% run_dir = 'SW_test/';
+run_dir = 'SW_test/';
 
-MFdim=64; % Dimension in the mean fields
+MFdim=32; % Dimension in the mean fields
 numMF = 2; % number of mean fields
 num_Energy_AM = 4;
 num_reynolds = 5;
@@ -63,12 +63,12 @@ for ii=0:numMF-1
     MFmax{ii+1} = max(abs(MF{ii+1}));
 end
 subplot(311);
-htime = floor(length(time))*0.85;
+htime = floor(length(time));
 % plot(time(1:htime), log10(MFmax{2}(1:htime)),time(1:htime), log10(MFmax{1}(1:htime)))
 plot( linspace(0,2*pi,MFdim), MF{2}(:,end),linspace(0,2*pi,MFdim), MF{1}(:,end) )
 contourf(time(1:htime), linspace(0,2*pi,MFdim),MF{2}(:,1:htime),20,'Linestyle','none')
 colorbar;
-title(['Pm = ' num2str(Pm) ' By = ' num2str(By)])
+title(['Pm = ' num2str(Pm) ' Rm = 8000' num2str(By)])
 % for kk=1:130
 %     plot( linspace(0,2*pi,MFdim), MF{2}(:,kk),linspace(0,2*pi,MFdim), MF{1}(:,kk) )
 %     title(['t = ' num2str(time(kk))])

@@ -15,11 +15,6 @@
 		A254623A191A60B300920C0A /* Input_parameters.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2546238191A60B300920C0A /* Input_parameters.cc */; };
 		A2546240191AD01B00920C0A /* MPIdata.cc in Sources */ = {isa = PBXBuildFile; fileRef = A254623E191AD01B00920C0A /* MPIdata.cc */; };
 		A2A3A6E919756550000C1024 /* Model_AutoGen_template.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2A3A6E719756550000C1024 /* Model_AutoGen_template.cc */; };
-		A2A3A6F219756565000C1024 /* MMA_Generated_Equations_BQlin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A2A3A6EC19756565000C1024 /* MMA_Generated_Equations_BQlin.cpp */; };
-		A2A3A6F319756565000C1024 /* MatlabRead.m in Sources */ = {isa = PBXBuildFile; fileRef = A2A3A6EE19756565000C1024 /* MatlabRead.m */; };
-		A2A3A6F419756565000C1024 /* MatlabRead_extractGrowth.m in Sources */ = {isa = PBXBuildFile; fileRef = A2A3A6EF19756565000C1024 /* MatlabRead_extractGrowth.m */; };
-		A2A3A6F519756565000C1024 /* ReadCklData.m in Sources */ = {isa = PBXBuildFile; fileRef = A2A3A6F019756565000C1024 /* ReadCklData.m */; };
-		A2A3A6F619756565000C1024 /* WriteMRIDSSinput.m in Sources */ = {isa = PBXBuildFile; fileRef = A2A3A6F119756565000C1024 /* WriteMRIDSSinput.m */; };
 		A2ADBADE19169F860082125D /* intEulerCN.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2ADBADC19169F860082125D /* intEulerCN.cc */; };
 		A2ADBAE11917D7370082125D /* General_Auxiliary.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2ADBADF1917D7370082125D /* General_Auxiliary.cc */; };
 		A2BA0FA11912A96C00866A27 /* main.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2BA0FA01912A96C00866A27 /* main.cc */; };
@@ -62,11 +57,11 @@
 		A2A3A6E719756550000C1024 /* Model_AutoGen_template.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Model_AutoGen_template.cc; sourceTree = "<group>"; };
 		A2A3A6E819756550000C1024 /* Model_AutoGen_template.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Model_AutoGen_template.h; sourceTree = "<group>"; };
 		A2A3A6EB19756565000C1024 /* GenerateC++Equations.nb */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "GenerateC++Equations.nb"; sourceTree = "<group>"; };
-		A2A3A6EC19756565000C1024 /* MMA_Generated_Equations_BQlin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_Equations_BQlin.cpp; sourceTree = "<group>"; };
 		A2A3A6EE19756565000C1024 /* MatlabRead.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MatlabRead.m; sourceTree = "<group>"; };
 		A2A3A6EF19756565000C1024 /* MatlabRead_extractGrowth.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MatlabRead_extractGrowth.m; sourceTree = "<group>"; };
 		A2A3A6F019756565000C1024 /* ReadCklData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ReadCklData.m; sourceTree = "<group>"; };
 		A2A3A6F119756565000C1024 /* WriteMRIDSSinput.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WriteMRIDSSinput.m; sourceTree = "<group>"; };
+		A2A3A6F719762869000C1024 /* MMA_Generated_Equations_BQlin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_Equations_BQlin.cpp; sourceTree = "<group>"; };
 		A2ADBADC19169F860082125D /* intEulerCN.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = intEulerCN.cc; sourceTree = "<group>"; };
 		A2ADBADD19169F860082125D /* intEulerCN.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = intEulerCN.h; sourceTree = "<group>"; };
 		A2ADBADF1917D7370082125D /* General_Auxiliary.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = General_Auxiliary.cc; sourceTree = "<group>"; };
@@ -80,6 +75,7 @@
 		A2BA0FB71912B15F00866A27 /* Model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Model.h; sourceTree = "<group>"; };
 		A2BA0FC21912F44800866A27 /* Initialization_routines.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Initialization_routines.cc; sourceTree = "<group>"; };
 		A2BA0FC31912F44800866A27 /* Initialization_routines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Initialization_routines.h; sourceTree = "<group>"; };
+		A2EDFCAB1978603B0028A1A3 /* MMA_Generated_Equations_fullBQlin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_Equations_fullBQlin.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,8 +92,9 @@
 		A2A3A6EA19756565000C1024 /* Mathematica */ = {
 			isa = PBXGroup;
 			children = (
+				A2A3A6F719762869000C1024 /* MMA_Generated_Equations_BQlin.cpp */,
+				A2EDFCAB1978603B0028A1A3 /* MMA_Generated_Equations_fullBQlin.cpp */,
 				A2A3A6EB19756565000C1024 /* GenerateC++Equations.nb */,
-				A2A3A6EC19756565000C1024 /* MMA_Generated_Equations_BQlin.cpp */,
 			);
 			path = Mathematica;
 			sourceTree = "<group>";
@@ -248,13 +245,8 @@
 				A2BA0FA11912A96C00866A27 /* main.cc in Sources */,
 				A20239B4194D3FFA00275CD9 /* MHD_BQlin.cc in Sources */,
 				A2A3A6E919756550000C1024 /* Model_AutoGen_template.cc in Sources */,
-				A2A3A6F319756565000C1024 /* MatlabRead.m in Sources */,
 				A2ADBADE19169F860082125D /* intEulerCN.cc in Sources */,
 				A20239BE195B262400275CD9 /* TimeVariables.cc in Sources */,
-				A2A3A6F419756565000C1024 /* MatlabRead_extractGrowth.m in Sources */,
-				A2A3A6F519756565000C1024 /* ReadCklData.m in Sources */,
-				A2A3A6F219756565000C1024 /* MMA_Generated_Equations_BQlin.cpp in Sources */,
-				A2A3A6F619756565000C1024 /* WriteMRIDSSinput.m in Sources */,
 				A2546240191AD01B00920C0A /* MPIdata.cc in Sources */,
 				A2BA0FB11912B14900866A27 /* intEuler.cc in Sources */,
 				A20239BB195B257A00275CD9 /* fftwPlans.cc in Sources */,
