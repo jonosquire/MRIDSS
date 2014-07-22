@@ -62,7 +62,7 @@
       </MacroExpansion>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-np 8"
+            argument = "-np 2"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

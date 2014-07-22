@@ -6,11 +6,11 @@ SIMULATION TYPE: MHD_BQlin
 
 // Box parameters
 lx_ = 1.000000000000000, ly_ = 3.141592653589793, lz_ = 1.000000000000000
-nx_ = 16,  ny_ = 32,  nz_ = 32
+nx_ = 8,  ny_ = 16,  nz_ = 16
 
 // Time parameters
 dt_ = 0.25
-t_initial_ = 0.000000000000000,   t_final_ = 10
+t_initial_ = 0.000000000000000,   t_final_ = 40
 
 // Saving
 tv_save_ = 0.25,   // Save energy, momentum etc. time-step
@@ -21,8 +21,8 @@ mean_field_save? = 1  // Save mean fields
 
 // General physical parameters
 q_ = 1.500000000000000 
-nu_ = 0.00400000000000,  eta_ = 0.00100000000000,   // Dissipation parameters
-f_noise_ = 20.00000000000000
+nu_ = 0.00400000000000,  eta_ = 0.00400000000000,   // Dissipation parameters
+f_noise_ = 100.00000000000000
 
 // Flags for simulation
 Remap? = 1

@@ -12,7 +12,7 @@ run_dir  = 'HiRes_Rm8000Noise4Pm4/';
 % run_dir = ['CheckNoise' n2s(noise) '_Rm' n2s(Rm) 'Pm' n2s(Pm) '/'];
 run_dir = 'SW_test/';
 
-MFdim=32; % Dimension in the mean fields
+MFdim=16; % Dimension in the mean fields
 numMF = 2; % number of mean fields
 num_Energy_AM = 4;
 num_reynolds = 5;

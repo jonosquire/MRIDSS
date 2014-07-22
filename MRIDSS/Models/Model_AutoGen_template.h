@@ -130,7 +130,8 @@ private:
     dcmplxVecM dzdzBy_;
     // Reynolds stresses
     dcmplxMat reynolds_mat_tmp_; // Temporary matrix storage for fft
-    dcmplxVecM rey_mkxky_tmp_,rey_kz_tmp_,rey_mkxkz_tmp_,rey_mky_tmp_; // Convenient to store vectors for converting between u, zeta etc. and u uy uz...
+    // Automatically generated temporary variables - class definition
+    dcmplxVecM rey_TiLap2TkxbTky, rey_TdzTiLap2Tkxb, rey_TiLap2Tky, rey_TdzTiLap2;
 
     //////////////////////////////////////////////////////
     

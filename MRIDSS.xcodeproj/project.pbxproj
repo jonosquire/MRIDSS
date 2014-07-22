@@ -53,6 +53,7 @@
 		A254623D191AC6CC00920C0A /* MPIconfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = MPIconfig.xcconfig; sourceTree = "<group>"; };
 		A254623E191AD01B00920C0A /* MPIdata.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MPIdata.cc; sourceTree = "<group>"; };
 		A254623F191AD01B00920C0A /* MPIdata.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPIdata.h; sourceTree = "<group>"; };
+		A2618DD0197EB8D9001EC9FD /* MMA_Generated_ReynoldsStresses.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_ReynoldsStresses.cpp; sourceTree = "<group>"; };
 		A2733C4E196E37EA00352DD6 /* SW_test.DSSinput */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SW_test.DSSinput; sourceTree = "<group>"; };
 		A2A3A6E719756550000C1024 /* Model_AutoGen_template.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Model_AutoGen_template.cc; sourceTree = "<group>"; };
 		A2A3A6E819756550000C1024 /* Model_AutoGen_template.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Model_AutoGen_template.h; sourceTree = "<group>"; };
@@ -92,6 +93,7 @@
 		A2A3A6EA19756565000C1024 /* Mathematica */ = {
 			isa = PBXGroup;
 			children = (
+				A2618DD0197EB8D9001EC9FD /* MMA_Generated_ReynoldsStresses.cpp */,
 				A2A3A6F719762869000C1024 /* MMA_Generated_Equations_BQlin.cpp */,
 				A2EDFCAB1978603B0028A1A3 /* MMA_Generated_Equations_fullBQlin.cpp */,
 				A2A3A6EB19756565000C1024 /* GenerateC++Equations.nb */,

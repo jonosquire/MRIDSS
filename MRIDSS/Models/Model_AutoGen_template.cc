@@ -105,11 +105,11 @@ fft_(fft) // FFT data
     
     // Reynolds stresses - this need to be changed to automatic also
     reynolds_mat_tmp_ = dcmplxMat(NZ_,NZ_);
-    // converting between u, zeta... and u, uy... for the Reynolds stresses
-    rey_mkxky_tmp_ = dcmplxVecM( NZ_ );
-    rey_kz_tmp_ = dcmplxVecM( NZ_ );
-    rey_mkxkz_tmp_ = dcmplxVecM( NZ_ );
-    rey_mky_tmp_ = dcmplxVecM( NZ_ );
+    // Automatically generated temporary variables - class constructor
+    rey_TiLap2TkxbTky = dcmplxVecM(NZ_);
+    rey_TdzTiLap2Tkxb = dcmplxVecM(NZ_);
+    rey_TiLap2Tky = dcmplxVecM(NZ_);
+    rey_TdzTiLap2 = dcmplxVecM(NZ_);
     
     
     /////////////////////////////////////////////////
@@ -546,19 +546,18 @@ void Model_AutoGen_template::rhs(double t, double dt_lin,
             mult_fac = 1.0; // Only count ky=0 mode once
         
         double ftfac = mult_fac*fft2Dfac_; // NZ^2 factor for ifft is included here - more efficient since scalar
-        // These are Eigen matrices instead, just for asDiagonal
-        rey_mkxky_tmp_ = (-kyctmp_*kxctmp_ )*ilap2tmp_.cast<dcmplx>().matrix();
-        rey_kz_tmp_ = (kz_*ilap2tmp_).matrix();
-        rey_mkxkz_tmp_ = ((-kxctmp_ )*kz_*ilap2tmp_).matrix();
-        rey_mky_tmp_ = (-kyctmp_ )*ilap2tmp_.cast<dcmplx>().matrix();
+
+        //Assign automatically generated variables in equations
+        // Vector variable definition Reynolds stress (automatic)
+        rey_TiLap2TkxbTky = ilap2tmp_.cast<dcmplx>().matrix()*(kxctmp_*kyctmp_);
+        rey_TdzTiLap2Tkxb = (ilap2tmp_*kz_).matrix()*kxctmp_;
+        rey_TiLap2Tky = ilap2tmp_.cast<dcmplx>().matrix()*kyctmp_;
+        rey_TdzTiLap2 = (ilap2tmp_*kz_).matrix();
         
         // CAN PROBABLY REDUCE THE COMPUTATION BY HALF BY USING Ckl SYMMETRY!
         // bz*ux - uz*bx
-        // bz*ux
-        reynolds_mat_tmp_ = rey_mkxkz_tmp_.asDiagonal()*C31_ +rey_mky_tmp_.asDiagonal()*C41_;
-        // - uz*bx
-        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*C13_ +
-             rey_mky_tmp_.asDiagonal()*C23_ ;
+        // Bx reynolds stress
+        reynolds_mat_tmp_ = C31_*rey_TdzTiLap2Tkxb.asDiagonal()-C32_*rey_TiLap2Tky.asDiagonal()-rey_TdzTiLap2Tkxb.asDiagonal()*C31_-rey_TiLap2Tky.asDiagonal()*C41_;
         
         // fft(fft( a )')'
         fft_.back_2DFull(reynolds_mat_tmp_);
@@ -567,21 +566,13 @@ void Model_AutoGen_template::rhs(double t, double dt_lin,
         bzux_m_uzbx_d_ += ftfac*(reynolds_mat_tmp_.diagonal().array().real());
         
         // bz*uy - uz*by
-        // bz*uy
-        reynolds_mat_tmp_ = rey_mkxkz_tmp_.asDiagonal()*C13_*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ += rey_mkxkz_tmp_.asDiagonal()*C23_*rey_kz_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ += rey_mky_tmp_.asDiagonal()*C14_*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ += rey_mky_tmp_.asDiagonal()*C24_*rey_kz_tmp_.conjugate().asDiagonal();
-        // -uz*by
-        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*C31_*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*C41_*rey_kz_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ -= rey_mky_tmp_.asDiagonal()*C32_*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ -= rey_mky_tmp_.asDiagonal()*C42_*rey_kz_tmp_.conjugate().asDiagonal();
+        // By reynolds stress
+        reynolds_mat_tmp_ = rey_TdzTiLap2.asDiagonal()*C41_*rey_TdzTiLap2Tkxb.asDiagonal()+rey_TdzTiLap2Tkxb.asDiagonal()*C31_*rey_TiLap2TkxbTky.asDiagonal()+rey_TdzTiLap2Tkxb.asDiagonal()*C32_*rey_TdzTiLap2.asDiagonal()+rey_TiLap2TkxbTky.asDiagonal()*C32_*rey_TiLap2Tky.asDiagonal()+rey_TiLap2Tky.asDiagonal()*C41_*rey_TiLap2TkxbTky.asDiagonal()+rey_TiLap2Tky.asDiagonal()*C42_*rey_TdzTiLap2.asDiagonal()-rey_TdzTiLap2.asDiagonal()*C42_*rey_TiLap2Tky.asDiagonal()-rey_TiLap2TkxbTky.asDiagonal()*C31_*rey_TdzTiLap2Tkxb.asDiagonal();
         // fft(fft( a )')'
         fft_.back_2DFull(reynolds_mat_tmp_);
         
         // Keep a running sum
-        bzuy_m_uzby_d_ -= ftfac*(reynolds_mat_tmp_.diagonal().array().real());
+        bzuy_m_uzby_d_ += ftfac*(reynolds_mat_tmp_.diagonal().array().real());
         
         
         
@@ -794,14 +785,14 @@ void Model_AutoGen_template::Calc_Energy_AM_Diss(TimeVariables& tv, double t, co
             //   Angular momentum
             
             // These are Eigen matrices instead, just for asDiagonal
-            rey_mkxky_tmp_ = (-kyctmp_*kxctmp_ )*ilap2tmp_.cast<dcmplx>().matrix();
-            rey_kz_tmp_ = (kz_*ilap2tmp_).matrix();
+            rey_TiLap2TkxbTky = (-kyctmp_*kxctmp_ )*ilap2tmp_.cast<dcmplx>().matrix();
+            rey_TdzTiLap2 = (kz_*ilap2tmp_).matrix();
             
             // uy*ux - steal Reynolds stress variable for this
-            bzux_m_uzbx_d_ = (rey_mkxky_tmp_.array()*Cin[i].block( 0, 0, NZ_, NZ_).diagonal().array()).real() + (rey_kz_tmp_.array()*Cin[i].block(NZ_, 0,NZ_, NZ_).diagonal().array()).real();
+            bzux_m_uzbx_d_ = (rey_TiLap2TkxbTky.array()*Cin[i].block( 0, 0, NZ_, NZ_).diagonal().array()).real() + (rey_TdzTiLap2.array()*Cin[i].block(NZ_, 0,NZ_, NZ_).diagonal().array()).real();
             AM_u += mult_fac*bzux_m_uzbx_d_.sum();
             // by*bx - steal Reynolds stress variable for this
-            bzux_m_uzbx_d_ = (rey_mkxky_tmp_.array()*Cin[i].block( 2*NZ_,2*NZ_, NZ_, NZ_).diagonal().array()).real() +   (rey_kz_tmp_.array()*Cin[i].block(3*NZ_, 2*NZ_,NZ_, NZ_).diagonal().array()).real();
+            bzux_m_uzbx_d_ = (rey_TiLap2TkxbTky.array()*Cin[i].block( 2*NZ_,2*NZ_, NZ_, NZ_).diagonal().array()).real() +   (rey_TdzTiLap2.array()*Cin[i].block(3*NZ_, 2*NZ_,NZ_, NZ_).diagonal().array()).real();
             AM_b += mult_fac*bzux_m_uzbx_d_.sum();
             //
             //////////////////////////////////////
