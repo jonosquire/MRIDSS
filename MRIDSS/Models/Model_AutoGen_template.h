@@ -30,6 +30,8 @@ public:
     Model_AutoGen_template(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
     ~Model_AutoGen_template();
     
+    // Model name - for comparison wiht input file as a check
+    const std::string equations_name;
     
     // Equations themselves
     void rhs(double t, double dt_lin,
@@ -102,16 +104,7 @@ private:
     // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
     bool dont_drive_ky0_modes_Q_;
     
-    // Reynolds stress - store both complex and double for fft and to pass less data around with MPI
-    // complex
-    dcmplxVec bzux_m_uzbx_c_; // bz*ux-uz*bx
-    dcmplxVec bzuy_m_uzby_c_; // bz*uy - uz*by
-    // double
-    doubVec bzux_m_uzbx_d_, bzux_m_uzbx_drec_; // bz*ux-uz*bx
-    doubVec bzuy_m_uzby_d_, bzuy_m_uzby_drec_; // bz*uy - uz*by
-    
-    double * reynolds_save_tmp_; // Saving the various contributions to mean-field dynamo
-
+   
     
     ////////////////////////////////////////////////////
     //    TEMPORARY VARIABLES - SAME ACROSS MODELS    //
@@ -128,8 +121,19 @@ private:
     dcmplxVecM By_;
     dcmplxVecM dzBy_;
     dcmplxVecM dzdzBy_;
+    
     // Reynolds stresses
     dcmplxMat reynolds_mat_tmp_; // Temporary matrix storage for fft
+    
+    // store both complex and double for fft and to pass less data around with MPI
+    dcmplxVec bzux_m_uzbx_c_; // bz*ux-uz*bx
+    dcmplxVec bzuy_m_uzby_c_; // bz*uy - uz*by
+    // double
+    doubVec bzux_m_uzbx_d_, bzuy_m_uzby_d_; // stresses themselves (double)
+    doubVec reynolds_stress_MPI_send_, reynolds_stress_MPI_receive_; // mpi buffers
+    
+    double * reynolds_save_tmp_; // Saving the various contributions to mean-field dynamo
+
     // Automatically generated temporary variables - class definition
     dcmplxVecM rey_TiLap2TkxbTky, rey_TdzTiLap2Tkxb, rey_TiLap2Tky, rey_TdzTiLap2;
 

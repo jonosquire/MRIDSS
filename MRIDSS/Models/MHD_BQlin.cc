@@ -17,6 +17,7 @@
 
 // Constructor for MHD_BQlin
 MHD_BQlin::MHD_BQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) :
+equations_name("MHD_BQlin"),
 num_MF_(2), num_fluct_(4),
 q_(sp.q), f_noise_(sp.f_noise), nu_(sp.nu), eta_(sp.eta),
 QL_YN_(sp.QuasiLinearQ),
@@ -24,6 +25,15 @@ Model(sp.NZ, sp.NXY , sp.L), // Dimensions - stored in base
 mpi_(mpi), // MPI data
 fft_(fft) // FFT data
 {
+    // Check that model is that specified in input file
+    if (sp.equations_to_use != equations_name) {
+        std::stringstream error_str;
+        error_str << "Model name, " << equations_name << ", does not match that specified in input file, " << sp.equations_to_use << "!!" << std::endl;
+        mpi.print1( error_str.str() );
+        ABORT;
+    }
+        
+    
     // Dimensions that depend on model
     nz_Cfull_=num_fluct_*NZ_;
     // Calcuate kx and ky arrays - single dimesnsion NX*NY(/2) to simplify parallelization

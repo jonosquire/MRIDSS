@@ -30,6 +30,8 @@ public:
     MHD_BQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
     ~MHD_BQlin();
     
+    // Model name - for comparison wiht input file as a check
+    const std::string equations_name;
     
     // Equations themselves
     void rhs(double t, double dt_lin,

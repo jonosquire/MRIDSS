@@ -70,6 +70,9 @@ public:
     // Start using saved data
     bool start_from_saved_Q;
     
+    // Check that equations are correct in main.cc
+    std::string equations_to_use;
+    
     
     ///////////////////////////////////////////////
 

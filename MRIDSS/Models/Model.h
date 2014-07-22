@@ -32,6 +32,7 @@ public:
     }
     virtual ~Model() {};
     
+    
     // fx = f(x,t)
     // Returns nonlinear part of of RHS and a linear operator (linop_Ckl, linop_MF), so
     //  as to allow for semi-implicit integrators.

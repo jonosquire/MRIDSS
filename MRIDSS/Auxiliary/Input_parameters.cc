@@ -111,6 +111,11 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
         // If True, takes step, time, and data from FINAL_CKL_STATE_Proc#
         // This is loaded after other initialization, with t_final taken from input
 
+        
+        // Check that equations are the same as that specified in main
+        equations_to_use = Read_From_Input_File_<std::string>("equations_to_use_",fullfile,"no_equations");
+        
+        
     } else {
         std::cout << "Error: Input file not found!" << std::endl;
         ABORT;

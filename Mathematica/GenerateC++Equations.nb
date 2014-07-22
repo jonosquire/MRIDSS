@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       157,          7]
-NotebookDataLength[    360390,       9001]
-NotebookOptionsPosition[    356440,       8863]
-NotebookOutlinePosition[    356800,       8879]
-CellTagsIndexPosition[    356757,       8876]
+NotebookDataLength[    359775,       9004]
+NotebookOptionsPosition[    355828,       8866]
+NotebookOutlinePosition[    356188,       8882]
+CellTagsIndexPosition[    356145,       8879]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -8174,15 +8174,11 @@ Cell[BoxData[{
        RowBox[{"{", 
         RowBox[{
         "\"\<// Bx reynolds stress\\n\>\"", ",", 
-         "\"\<// By reynolds stress\\n\>\""}], "}"}]}], ";", 
+         "\"\<// By reynolds stress\\n\>\"", ",", 
+         "\"\<// Ux reynolds stress\\n\>\"", ",", 
+         "\"\<// Uy reynolds stress\\n\>\""}], "}"}]}], ";", 
       "\[IndentingNewLine]", 
-      RowBox[{"reynoldsStresses", " ", "=", " ", 
-       RowBox[{"(*", 
-        RowBox[{
-         RowBox[{"Grad", "[", 
-          RowBox[{
-           RowBox[{"uv", "[", "xpv", "]"}], ",", "xpv"}], "]"}], ".", 
-         RowBox[{"uv", "[", "xv", "]"}]}], "*)"}], 
+      RowBox[{"reynoldsStresses", " ", "=", " ", "\[IndentingNewLine]", 
        RowBox[{
         RowBox[{"{", 
          RowBox[{
@@ -8199,7 +8195,38 @@ Cell[BoxData[{
             RowBox[{"uy", "@@", "xpv"}]}], "-", 
            RowBox[{
             RowBox[{"by", "@@", "xv"}], " ", 
-            RowBox[{"uz", "@@", "xpv"}]}]}]}], "}"}], "/.", 
+            RowBox[{"uz", "@@", "xpv"}]}]}], ",", "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"-", 
+              RowBox[{
+               RowBox[{"Grad", "[", 
+                RowBox[{
+                 RowBox[{"uv", "[", "xv", "]"}], ",", "xv"}], "]"}], ".", 
+               RowBox[{"uv", "[", "xpv", "]"}]}]}], "+", 
+             RowBox[{
+              RowBox[{"Grad", "[", 
+               RowBox[{
+                RowBox[{"bv", "[", "xv", "]"}], ",", "xv"}], "]"}], ".", 
+              RowBox[{"bv", "[", "xpv", "]"}]}]}], ")"}], 
+           "\[LeftDoubleBracket]", "1", "\[RightDoubleBracket]"}], ",", 
+          RowBox[{
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"-", 
+              RowBox[{
+               RowBox[{"Grad", "[", 
+                RowBox[{
+                 RowBox[{"uv", "[", "xv", "]"}], ",", "xv"}], "]"}], ".", 
+               RowBox[{"uv", "[", "xpv", "]"}]}]}], "+", 
+             RowBox[{
+              RowBox[{"Grad", "[", 
+               RowBox[{
+                RowBox[{"bv", "[", "xv", "]"}], ",", "xv"}], "]"}], ".", 
+              RowBox[{"bv", "[", "xpv", "]"}]}]}], ")"}], 
+           "\[LeftDoubleBracket]", "2", "\[RightDoubleBracket]"}]}], "}"}], 
+        "\[IndentingNewLine]", "/.", 
         RowBox[{
          RowBox[{
           RowBox[{"f_", "@@", "xv"}], " ", 
@@ -8811,41 +8838,16 @@ constructor\\n\>\"", "<>", "\[IndentingNewLine]", "classConstrAssignMem",
    3.6150302990319557`*^9, 3.6150303154977713`*^9}, {3.615030358476726*^9, 
    3.615030367335416*^9}, {3.615030410950201*^9, 3.615030528064905*^9}, {
    3.615030560444873*^9, 3.615030676804809*^9}, {3.615031455139426*^9, 
-   3.615031528050686*^9}, {3.615031566790921*^9, 3.6150315683092747`*^9}}],
+   3.615031528050686*^9}, {3.615031566790921*^9, 3.6150315683092747`*^9}, {
+   3.615036379847866*^9, 3.6150364794466343`*^9}}],
 
-Cell[BoxData["\<\"// Automatically generated temporary variables - class \
-definition\\ndcmplxVecM rey_TiLap2TkxbTky, rey_TdzTiLap2Tkxb, rey_TiLap2Tky, \
-rey_TdzTiLap2;\\n\\n\\n\\n\\n// Automatically generated temporary variables - \
-class constructor\\nrey_TiLap2TkxbTky = dcmplxVecM(NZ_);\\nrey_TdzTiLap2Tkxb \
-= dcmplxVecM(NZ_);\\nrey_TiLap2Tky = dcmplxVecM(NZ_);\\nrey_TdzTiLap2 = \
-dcmplxVecM(NZ_);\\n\\n\\n\\n\\n//Assign automatically generated variables in \
-equations \\n// Vector variable definition Reynolds stress \
-(automatic)\\nrey_TiLap2TkxbTky = \
-ilap2tmp_.cast<dcmplx>().matrix()*(kxctmp_*kyctmp_);\\nrey_TdzTiLap2Tkxb = \
-(ilap2tmp_.cast<dcmplx>()*kz_).matrix()*kxctmp_;\\nrey_TiLap2Tky = \
-ilap2tmp_.cast<dcmplx>().matrix()*kyctmp_;\\nrey_TdzTiLap2 = \
-(ilap2tmp_.cast<dcmplx>()*kz_).matrix();\\n\\n\\n\\n//////////////////////////\
-//////////////////////////////\\n///  AUTOMATICALLY GENERATED REYNOLDS \
-STRESSES      /////\\n///       see GenerateC++Equations.nb in MMA        \
-/////\\n\\n// Bx reynolds stress\\nreynolds_mat_tmp_ = \
-C31_*rey_TdzTiLap2Tkxb.asDiagonal()-C32_*rey_TiLap2Tky.asDiagonal()-rey_\
-TdzTiLap2Tkxb.asDiagonal()*C31_-rey_TiLap2Tky.asDiagonal()*C41_;\\n\\n\\n// \
-By reynolds stress\\nreynolds_mat_tmp_ = \
-rey_TdzTiLap2.asDiagonal()*C41_*rey_TdzTiLap2Tkxb.asDiagonal()+rey_\
-TdzTiLap2Tkxb.asDiagonal()*C31_*rey_TiLap2TkxbTky.asDiagonal()+rey_\
-TdzTiLap2Tkxb.asDiagonal()*C32_*rey_TdzTiLap2.asDiagonal()+rey_TiLap2TkxbTky.\
-asDiagonal()*C32_*rey_TiLap2Tky.asDiagonal()+rey_TiLap2Tky.asDiagonal()*C41_*\
-rey_TiLap2TkxbTky.asDiagonal()+rey_TiLap2Tky.asDiagonal()*C42_*rey_TdzTiLap2.\
-asDiagonal()-rey_TdzTiLap2.asDiagonal()*C42_*rey_TiLap2Tky.asDiagonal()-rey_\
-TiLap2TkxbTky.asDiagonal()*C31_*rey_TdzTiLap2Tkxb.asDiagonal();\\n\\n/// \
-AUTOMATICALLY GENERATED REYNOLDS STRESSES - END \
-/////\\n////////////////////////////////////////////////////////\\n\"\>"], \
-"Output",
+Cell[BoxData["$Aborted"], "Output",
  CellChangeTimes->{
   3.615029595993595*^9, {3.615029712175734*^9, 3.615029738702917*^9}, 
    3.6150298308186693`*^9, 3.615030536672903*^9, {3.615030568803341*^9, 
    3.6150305833510027`*^9}, 3.615030644992588*^9, 3.615030678927168*^9, 
-   3.615031531480201*^9, 3.615031569368704*^9, 3.6150326956315928`*^9}],
+   3.615031531480201*^9, 3.615031569368704*^9, 3.6150326956315928`*^9, 
+   3.615036537181931*^9}],
 
 Cell[BoxData["\<\"~/Documents/MRIDSS/Mathematica/MMA_Generated_\
 ReynoldsStresses.cpp\"\>"], "Output",
@@ -8853,7 +8855,8 @@ ReynoldsStresses.cpp\"\>"], "Output",
   3.615029595993595*^9, {3.615029712175734*^9, 3.615029738702917*^9}, 
    3.6150298308186693`*^9, 3.615030536672903*^9, {3.615030568803341*^9, 
    3.6150305833510027`*^9}, 3.615030644992588*^9, 3.615030678927168*^9, 
-   3.615031531480201*^9, 3.615031569368704*^9, 3.615032695731099*^9}]
+   3.615031531480201*^9, 3.615031569368704*^9, 3.6150326956315928`*^9, 
+   3.615036537185924*^9}]
 }, Open  ]],
 
 Cell[BoxData[""], "Input",
@@ -8996,11 +8999,11 @@ Cell[321678, 8066, 1624, 40, 148, "Input"],
 Cell[323305, 8108, 611, 17, 42, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[323953, 8130, 29711, 683, 1764, "Input"],
-Cell[353667, 8815, 2226, 32, 726, "Output"],
-Cell[355896, 8849, 409, 6, 28, "Output"]
+Cell[323953, 8130, 30927, 711, 1815, "Input"],
+Cell[354883, 8843, 370, 6, 28, "Output"],
+Cell[355256, 8851, 437, 7, 28, "Output"]
 }, Open  ]],
-Cell[356320, 8858, 92, 1, 28, "Input"]
+Cell[355708, 8861, 92, 1, 28, "Input"]
 }, Open  ]]
 }, Open  ]]
 }

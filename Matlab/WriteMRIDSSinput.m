@@ -12,6 +12,8 @@ for By = 0.02:0.02:0.2
 for Pm = [4];
     Rm=8000;noise=3;
     filename = ['LinearBScans_B' rmdot(num2str(By))  '_Noise' rmdot(num2str(noise)) 'Rm' num2str(Rm) 'Pm' num2str(Pm)]; % file name
+    % Simulation type
+    equation_type = 'MHD_BQlin';
     % Parameters, comment out some of these fordifferent parameter scans
     L=[1,pi,1];
     N=[40  64 64 ];
@@ -61,7 +63,10 @@ for Pm = [4];
 
     fprintf(fid,'Input file for MRIDSS - Generated automatically by WriteMRIDSSinput.m\n\n','char');
     fprintf(fid,'Format: variable_ = var (can have arbitrary number of spaces around = )\n\n', 'char');
-    fprintf(fid, 'SIMULATION TYPE: MHD_BQlin\n\n','char');
+    
+    fprintf(fid,'// Simulation type - used as a check\n','char');
+    fprintf(fid,['equations_to_use_ = ' equation_type ' \n' ,'char');
+    
     % Printing variables
     fprintf(fid, '// Box parameters\n','char');
     fprintf(fid, 'lx_ = %15.15f, ly_ = %15.15f, lz_ = %15.15f \n',L(1),L(2),L(3));
@@ -92,8 +97,6 @@ for Pm = [4];
     
     fprintf(fid,'// Restart simulation\n','char');
     fprintf(fid,'start_from_saved? = %d \n' ,StartFromSavedQ);
-    
-
 
 
     fclose(fid);

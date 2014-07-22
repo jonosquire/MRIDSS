@@ -14,7 +14,7 @@
 /////              MPI FLAG               ////////
 // This is better as a preprocessor directive since it lets you debug in serial more easily
 
-#define USE_MPI_FLAG
+//#define USE_MPI_FLAG
 
 //////////////////////////////////////////////////
 

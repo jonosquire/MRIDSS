@@ -13,12 +13,9 @@
 //
 // Derived from Model (model.h)
 
-
-///   DOES NOT WORK RIGHT NOW!!!!!!!!
-
-
 // Constructor for Model_AutoGen_template
 Model_AutoGen_template::Model_AutoGen_template(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) :
+equations_name("MHD_BQlin"),
 num_MF_(2), num_fluct_(4),
 q_(sp.q), f_noise_(sp.f_noise), nu_(sp.nu), eta_(sp.eta),
 QL_YN_(sp.QuasiLinearQ),
@@ -26,9 +23,17 @@ Model(sp.NZ, sp.NXY , sp.L), // Dimensions - stored in base
 mpi_(mpi), // MPI data
 fft_(fft) // FFT data
 {
+    // Check that model is that specified in input file
+    if (sp.equations_to_use != equations_name) {
+        std::stringstream error_str;
+        error_str << "Model name, " << equations_name << ", does not match that specified in input file, " << sp.equations_to_use << "!!" << std::endl;
+        mpi.print1( error_str.str() );
+        ABORT;
+    }
+    
     // Dimensions that depend on model
     nz_Cfull_=num_fluct_*NZ_;
-    // Calcuate kx and ky arrays - single dimesnsion NX*NY(/2) to simplify parallelization
+    // Calcuate kx and ky arrays - single dimension NX*NY(/2) to simplify parallelization
     kx_ = new dcmplx[ nxy_full_ ]; // Entire kx_ and ky_ arrays are stored on all processors
     ky_ = new dcmplx[ nxy_full_ ];
     ky_index_ = new int[ nxy_full_ ];
@@ -73,9 +78,9 @@ fft_(fft) // FFT data
     bzuy_m_uzby_c_ = dcmplxVec::Zero(NZ_);
     bzux_m_uzbx_d_ = doubVec::Zero(NZ_);
     bzuy_m_uzby_d_ = doubVec::Zero(NZ_);
-    // Receive buffers for MPI, for some reason MPI::IN_PLACE is not giving the correct result!
-    bzux_m_uzbx_drec_ = doubVec::Zero(NZ_);
-    bzuy_m_uzby_drec_ = doubVec::Zero(NZ_);
+    // Send/receive buffers for MPI, for some reason MPI::IN_PLACE is not giving the correct result!
+    reynolds_stress_MPI_send_ = doubVec::Zero(num_MF_*NZ_);
+    reynolds_stress_MPI_receive_ = doubVec::Zero(num_MF_*NZ_);
     
     reynolds_save_tmp_ = new double[5];
     
@@ -607,17 +612,15 @@ void Model_AutoGen_template::rhs(double t, double dt_lin,
     //////////////////////////////////////
     // Reynolds stress
     // Sum accross all processes
-        
+    
+    reynolds_stress_MPI_send_ << bzux_m_uzbx_d_, bzuy_m_uzby_d_;// Put into a single variable to reduce mpi calls
+    
     // FOR SOME REASON MPI::IN_PLACE IS GIVING INCORRECT RESULTS!
-//        mpi_.SumAllReduce_IP_double(bzux_m_uzbx_d_.data(), NZ_);
-//        mpi_.SumAllReduce_IP_double(bzuy_m_uzby_d_.data(), NZ_);
-    mpi_.SumAllReduce_double(bzux_m_uzbx_d_.data(), bzux_m_uzbx_drec_.data(), NZ_);
-    mpi_.SumAllReduce_double(bzuy_m_uzby_d_.data(), bzuy_m_uzby_drec_.data(), NZ_);
-    
-    // Convert to complex - didn't seem worth the effort of fftw real transforms as time spent here (and in MF transforms) will be very minimal
-    
-    bzux_m_uzbx_c_ = bzux_m_uzbx_drec_.cast<dcmplx>();
-    bzuy_m_uzby_c_ = bzuy_m_uzby_drec_.cast<dcmplx>();
+    mpi_.SumAllReduce_double(reynolds_stress_MPI_send_.data(), reynolds_stress_MPI_receive_.data(), num_MFs()*NZ_);
+    // Extract from ..._receive_ variable and convert to complex
+    // (didn't seem worth the effort of fftw real transforms as time spent here (and in MF transforms) will be very minimal)
+    bzux_m_uzbx_c_ = reynolds_stress_MPI_receive_.segment(0,NZ_).cast<dcmplx>();
+    bzuy_m_uzby_c_ = reynolds_stress_MPI_receive_.segment(NZ_,NZ_).cast<dcmplx>();
     
     // Calculate stresses in Fourier space
     fft_.for_1D(bzux_m_uzbx_c_.data());

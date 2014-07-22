@@ -32,3 +32,6 @@ initial_By_=0.05
 
 // Restart simulation
 start_from_saved? = 0
+
+// Equations used - this is just a check, if it doesn't match will throw an error
+equations_to_use_ = MHD_BQlin
