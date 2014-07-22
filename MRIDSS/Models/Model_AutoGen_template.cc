@@ -555,10 +555,10 @@ void Model_AutoGen_template::rhs(double t, double dt_lin,
         // CAN PROBABLY REDUCE THE COMPUTATION BY HALF BY USING Ckl SYMMETRY!
         // bz*ux - uz*bx
         // bz*ux
-        reynolds_mat_tmp_ = rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block( 2*NZ_, 0, NZ_, NZ_) +rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(3*NZ_, 0,NZ_, NZ_);
+        reynolds_mat_tmp_ = rey_mkxkz_tmp_.asDiagonal()*C31_ +rey_mky_tmp_.asDiagonal()*C41_;
         // - uz*bx
-        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block(0,2*NZ_, NZ_, NZ_) +
-             rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(NZ_, 2*NZ_,NZ_, NZ_) ;
+        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*C13_ +
+             rey_mky_tmp_.asDiagonal()*C23_ ;
         
         // fft(fft( a )')'
         fft_.back_2DFull(reynolds_mat_tmp_);
@@ -568,15 +568,15 @@ void Model_AutoGen_template::rhs(double t, double dt_lin,
         
         // bz*uy - uz*by
         // bz*uy
-        reynolds_mat_tmp_ = rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block(0,2*NZ_, NZ_, NZ_)*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ += rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block(NZ_,2*NZ_, NZ_, NZ_)*rey_kz_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ += rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(0,3*NZ_, NZ_, NZ_)*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ += rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(NZ_,3*NZ_, NZ_, NZ_)*rey_kz_tmp_.conjugate().asDiagonal();
+        reynolds_mat_tmp_ = rey_mkxkz_tmp_.asDiagonal()*C13_*rey_mkxky_tmp_.conjugate().asDiagonal();
+        reynolds_mat_tmp_ += rey_mkxkz_tmp_.asDiagonal()*C23_*rey_kz_tmp_.conjugate().asDiagonal();
+        reynolds_mat_tmp_ += rey_mky_tmp_.asDiagonal()*C14_*rey_mkxky_tmp_.conjugate().asDiagonal();
+        reynolds_mat_tmp_ += rey_mky_tmp_.asDiagonal()*C24_*rey_kz_tmp_.conjugate().asDiagonal();
         // -uz*by
-        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block( 2*NZ_,0, NZ_, NZ_)*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block(3*NZ_, 0, NZ_, NZ_)*rey_kz_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ -= rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(2*NZ_, NZ_, NZ_, NZ_)*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ -= rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(3*NZ_, NZ_, NZ_, NZ_)*rey_kz_tmp_.conjugate().asDiagonal();
+        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*C31_*rey_mkxky_tmp_.conjugate().asDiagonal();
+        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*C41_*rey_kz_tmp_.conjugate().asDiagonal();
+        reynolds_mat_tmp_ -= rey_mky_tmp_.asDiagonal()*C32_*rey_mkxky_tmp_.conjugate().asDiagonal();
+        reynolds_mat_tmp_ -= rey_mky_tmp_.asDiagonal()*C42_*rey_kz_tmp_.conjugate().asDiagonal();
         // fft(fft( a )')'
         fft_.back_2DFull(reynolds_mat_tmp_);
         
