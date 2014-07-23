@@ -624,6 +624,18 @@ void MHD_BQlin::rhs(double t, double dt_lin,
     bzux_m_uzbx_c_ = reynolds_stress_MPI_receive_.segment(0,NZ_).cast<dcmplx>();
     bzuy_m_uzby_c_ = reynolds_stress_MPI_receive_.segment(NZ_,NZ_).cast<dcmplx>();
     
+//    if (mpi_.my_n_v()==1) {
+//        std::cout << bzux_m_uzbx_d_.transpose() << std::endl;
+//        std::cout << bzuy_m_uzby_d_.transpose() << std::endl;
+//        std::cout << reynolds_stress_MPI_send_.transpose() << std::endl;
+//        std::cout << reynolds_stress_MPI_receive_.transpose() << std::endl;
+//        std::cout << bzux_m_uzbx_c_.transpose() << std::endl;
+//        std::cout << bzuy_m_uzby_c_.transpose() << std::endl;
+//        std::cout <<  std::endl;
+//    }
+    
+
+    
     // Calculate stresses in Fourier space
     fft_.for_1D(bzux_m_uzbx_c_.data());
     fft_.for_1D(bzuy_m_uzby_c_.data());
@@ -805,6 +817,7 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
         
         
     }
+    
     if (tv.energy_save_Q()){
         // Put the energy on processor 0
         mpi_.SumReduce_doub(&energy_u,&energy_u_f,1);
@@ -862,21 +875,28 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
             //////////////////////////////////////
             //   Reynolds stress
             // Saves quantities to do with the reynolds stress and dynamo
-            // 1) Shear contribution: Re( -q Bx(k0) By(k0))/By(k0)
-            // 2) y emf: Re( bzuy_m_uzby_c_*By(k0) )/By(k0)
-            // 3) y dissipation: eta*k0^2*By(k0)
-            // 4) x emf: Re( bzux_m_uzbx_c_*Bx(k0) )/Bx(k0)
-            // 5) x dissipation: eta*k0^2*Bx(k0)
+            // 1) Shear contribution: Re( -q Bx By)/|By|
+            // 2) y emf: Re( bzuy_m_uzby_c_*By )/|By|
+            // 3) y dissipation: eta*k^2*By
+            // 4) x emf: Re( bzux_m_uzbx_c_*Bx )/|Bx|
+            // 5) x dissipation: eta*k^2*Bx
             // Have assumed k0 to be lowest kz! i.e., driving largest dynamo possible in the box
             // There may be slight errors here from saving using the updated values of MFin, presumably this is a small effect, especially at high resolution (low dt) and in steady state.
             double* rey_point = tv.current_reynolds();
-            rey_point[0] = real(-q_*MFin[0](1)*conj(MFin[1](1)))/abs(MFin[1](1) );
-            rey_point[1] = real(bzuy_m_uzby_c_(1)*conj(MFin[1](1)))/abs(MFin[1](1) );
-            rey_point[2] = eta_ *kz2_(1)*abs(MFin[1](1) );
-            rey_point[3] = real(bzux_m_uzbx_c_(1)*conj(MFin[0](1)))/abs(MFin[0](1) );
-            rey_point[4] = eta_ * kz2_(1)*abs(MFin[0](1) );
+            rey_point[0] = -q_*(MFin[0]*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
+            rey_point[1] = (bzuy_m_uzby_c_*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
+            rey_point[2] = -eta_ *sqrt((kz2_*MFin[1]).abs2().sum());
+            rey_point[3] = (bzux_m_uzbx_c_*MFin[0].conjugate()).real().sum()/sqrt(MFin[0].abs2().sum());
+            rey_point[4] = -eta_ *sqrt((kz2_*MFin[0]).abs2().sum());
 //            rey_point[0] = real(bzuy_m_uzby_c_(1)*conj(MFin[1](1))) ;
 //            rey_point[1] = real(bzux_m_uzbx_c_(1)*conj(MFin[1](1))) ;
+//            // Old version - single largest mode
+//            double* rey_point = tv.current_reynolds();
+//            rey_point[0] = real(-q_*MFin[0](1)*conj(MFin[1](1)))/abs(MFin[1](1) );
+//            rey_point[1] = real(bzuy_m_uzby_c_(1)*conj(MFin[1](1)))/abs(MFin[1](1) );
+//            rey_point[2] = eta_ *kz2_(1)*abs(MFin[1](1) );
+//            rey_point[3] = real(bzux_m_uzbx_c_(1)*conj(MFin[0](1)))/abs(MFin[0](1) );
+//            rey_point[4] = eta_ * kz2_(1)*abs(MFin[0](1) );
             //
             //////////////////////////////////////
         }
