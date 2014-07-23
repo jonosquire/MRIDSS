@@ -83,6 +83,7 @@
 		A2EDFCB7197F24280028A1A3 /* MMA_Generated_Equations_FullUBQlin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_Equations_FullUBQlin.cpp; sourceTree = "<group>"; };
 		A2EDFCB8197F571F0028A1A3 /* MHD_FullUBQlin.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MHD_FullUBQlin.cc; sourceTree = "<group>"; };
 		A2EDFCB9197F571F0028A1A3 /* MHD_FullUBQlin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MHD_FullUBQlin.h; sourceTree = "<group>"; };
+		A2EDFCBE198038B90028A1A3 /* SConstruct */ = {isa = PBXFileReference; lastKnownFileType = text; path = SConstruct; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,6 +123,7 @@
 		A2BA0F941912A96C00866A27 = {
 			isa = PBXGroup;
 			children = (
+				A2EDFCBE198038B90028A1A3 /* SConstruct */,
 				A2A3A6EA19756565000C1024 /* Mathematica */,
 				A2A3A6ED19756565000C1024 /* Matlab */,
 				A254623D191AC6CC00920C0A /* MPIconfig.xcconfig */,
