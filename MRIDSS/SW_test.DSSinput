@@ -2,18 +2,20 @@ Input file for MRIDSS - Generated automatically by WriteMRIDSSinput.m
 
 Format: variable_ = var (can have arbitrary number of spaces around = )
 
-SIMULATION TYPE: MHD_BQlin
+SIMULATION TYPE: 
+// Equations used - this is just a check, if it doesn't match will throw an error
+equations_to_use_ = MHD_BQlin
 
 // Box parameters
-lx_ = 1.000000000000000, ly_ = 3.141592653589793, lz_ = 1.000000000000000
-nx_ = 8,  ny_ = 16,  nz_ = 16
+lx_ = 1.000000000000000, ly_ = 1.0, lz_ = 1.000000000000000
+nx_ = 16,  ny_ = 16,  nz_ = 16
 
 // Time parameters
-dt_ = 0.25
-t_initial_ = 0.000000000000000,   t_final_ = 40
+dt_ = 0.05
+t_initial_ = 0.000000000000000,   t_final_ = 5
 
 // Saving
-tv_save_ = 0.25,   // Save energy, momentum etc. time-step
+tv_save_ = 0.05,   // Save energy, momentum etc. time-step
 full_save_ = 401.000000000000000,   // Save full solution
 save_energy? =1  save_angular_mom? =1     save_dissipation?=0, // On-off flags
 save_reynolds_stress?= 1 
@@ -21,11 +23,11 @@ mean_field_save? = 1  // Save mean fields
 
 // General physical parameters
 q_ = 1.500000000000000 
-nu_ = 0.00400000000000,  eta_ = 0.00400000000000,   // Dissipation parameters
-f_noise_ = 100.00000000000000
+nu_ = 0.00200000000000,  eta_ = 0.00200000000000,   // Dissipation parameters
+f_noise_ = 0.00000000000000
 
 // Flags for simulation
-Remap? = 1
+Remap? = 0
 QuasiLinear? = 1
 
 initial_By_=0.05
@@ -33,5 +35,4 @@ initial_By_=0.05
 // Restart simulation
 start_from_saved? = 0
 
-// Equations used - this is just a check, if it doesn't match will throw an error
-equations_to_use_ = MHD_BQlin
+

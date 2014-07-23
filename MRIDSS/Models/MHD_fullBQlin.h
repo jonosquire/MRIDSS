@@ -1,13 +1,13 @@
 //
-//  Model_AutoGen_template.h
+//  MHD_fullBQlin.h
 //  MRIDSS
 //
 //  Created by Jonathan Squire on 4/25/14.
 //  Copyright (c) 2014 J Squire. All rights reserved.
 //
 
-#ifndef __MRIDSS__Model_AutoGen_template__
-#define __MRIDSS__Model_AutoGen_template__
+#ifndef __MRIDSS__MHD_fullBQlin__
+#define __MRIDSS__MHD_fullBQlin__
 
 
 #include "Model.h"
@@ -25,10 +25,10 @@
 // Model class for S3T/CE2 shearing box MHD model
 // Basic Quasi-linear MHD
 // Derived from Model (model.h)
-class Model_AutoGen_template : public Model {
+class MHD_fullBQlin : public Model {
 public:
-    Model_AutoGen_template(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
-    ~Model_AutoGen_template();
+    MHD_fullBQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
+    ~MHD_fullBQlin();
     
     // Model name - for comparison wiht input file as a check
     const std::string equations_name;
@@ -144,9 +144,9 @@ private:
     //  AUTO GENERATED VARIABLES
     
     // Automatically generated temporary variables - class definition
-    dcmplxVecM T2Tdz, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzP2TkxbPLUSTkxbP3, TdzTiLap2Tkxb, TdzTiLap2TkxbP3PLUSTdzTkxb, TdzTqPLUSTm2Tdz, TiLap2TkxbP2Tky, TiLap2Tky, TkxbPLUSTm2TdzP2TiLap2Tkxb, Tm2TdzTiLap2Tky, TmdzTiLap2Tkxb, TmdzTq, TmiLap2TkxbP2Tky, TmiLap2Tky;
+    dcmplxVecM T2Tdz, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzTiLap2Tkxb, TdzTiLap2TkxbP3PLUSTmdzTkxb, TdzTqPLUSTm2Tdz, TiLap2TkxbP2Tky, TiLap2Tky, Tm2TdzP2TiLap2Tkxb, Tm2TdzTiLap2Tky, TmdzTiLap2Tkxb, TmdzTq, TmiLap2TkxbP2Tky, TmiLap2Tky;
     
-    dcmplx Tkxb, TkxbTkyP2, Tky, Tm2TkxbTkyTq, Tmkxb, Tmky;
+    dcmplx Tkxb, Tky, Tm2TkxbTkyTq, Tmkxb, Tmky;
     
     dcmplxMat Ctmp_1_, Ctmp_2_, Ctmp_3_, Ctmp_4_, Ctmp_5_, Ctmp_6_;
     

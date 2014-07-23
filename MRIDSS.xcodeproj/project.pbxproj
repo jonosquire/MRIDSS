@@ -7,20 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A20239B4194D3FFA00275CD9 /* MHD_BQlin.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20239B2194D3FFA00275CD9 /* MHD_BQlin.cc */; };
 		A20239BB195B257A00275CD9 /* fftwPlans.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20239B9195B257A00275CD9 /* fftwPlans.cc */; };
 		A20239BE195B262400275CD9 /* TimeVariables.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20239BC195B262400275CD9 /* TimeVariables.cc */; };
 		A20A82B9193FE9BA00E2DF42 /* intRK2CN.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20A82B7193FE9BA00E2DF42 /* intRK2CN.cc */; };
 		A250B13A1937307A00218230 /* Constant_Damping.cc in Sources */ = {isa = PBXBuildFile; fileRef = A250B1381937307A00218230 /* Constant_Damping.cc */; };
 		A254623A191A60B300920C0A /* Input_parameters.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2546238191A60B300920C0A /* Input_parameters.cc */; };
 		A2546240191AD01B00920C0A /* MPIdata.cc in Sources */ = {isa = PBXBuildFile; fileRef = A254623E191AD01B00920C0A /* MPIdata.cc */; };
-		A2A3A6E919756550000C1024 /* Model_AutoGen_template.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2A3A6E719756550000C1024 /* Model_AutoGen_template.cc */; };
 		A2ADBADE19169F860082125D /* intEulerCN.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2ADBADC19169F860082125D /* intEulerCN.cc */; };
 		A2ADBAE11917D7370082125D /* General_Auxiliary.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2ADBADF1917D7370082125D /* General_Auxiliary.cc */; };
 		A2BA0FA11912A96C00866A27 /* main.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2BA0FA01912A96C00866A27 /* main.cc */; };
 		A2BA0FA31912A96C00866A27 /* MRIDSS.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = A2BA0FA21912A96C00866A27 /* MRIDSS.1 */; };
 		A2BA0FB11912B14900866A27 /* intEuler.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2BA0FAB1912B14900866A27 /* intEuler.cc */; };
 		A2BA0FC41912F44800866A27 /* Initialization_routines.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2BA0FC21912F44800866A27 /* Initialization_routines.cc */; };
+		A2EDFCAF197EE3A10028A1A3 /* MHD_BQlin.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2EDFCAD197EE3A10028A1A3 /* MHD_BQlin.cc */; };
+		A2EDFCB2197F054E0028A1A3 /* MHD_fullBQlin.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2EDFCB0197F054E0028A1A3 /* MHD_fullBQlin.cc */; };
+		A2EDFCBA197F571F0028A1A3 /* MHD_FullUBQlin.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2EDFCB8197F571F0028A1A3 /* MHD_FullUBQlin.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -37,8 +38,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A20239B2194D3FFA00275CD9 /* MHD_BQlin.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MHD_BQlin.cc; sourceTree = "<group>"; };
-		A20239B3194D3FFA00275CD9 /* MHD_BQlin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MHD_BQlin.h; sourceTree = "<group>"; };
 		A20239B9195B257A00275CD9 /* fftwPlans.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fftwPlans.cc; sourceTree = "<group>"; };
 		A20239BA195B257A00275CD9 /* fftwPlans.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fftwPlans.h; sourceTree = "<group>"; };
 		A20239BC195B262400275CD9 /* TimeVariables.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TimeVariables.cc; sourceTree = "<group>"; };
@@ -77,6 +76,13 @@
 		A2BA0FC21912F44800866A27 /* Initialization_routines.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Initialization_routines.cc; sourceTree = "<group>"; };
 		A2BA0FC31912F44800866A27 /* Initialization_routines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Initialization_routines.h; sourceTree = "<group>"; };
 		A2EDFCAB1978603B0028A1A3 /* MMA_Generated_Equations_fullBQlin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_Equations_fullBQlin.cpp; sourceTree = "<group>"; };
+		A2EDFCAD197EE3A10028A1A3 /* MHD_BQlin.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MHD_BQlin.cc; sourceTree = "<group>"; };
+		A2EDFCAE197EE3A10028A1A3 /* MHD_BQlin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MHD_BQlin.h; sourceTree = "<group>"; };
+		A2EDFCB0197F054E0028A1A3 /* MHD_fullBQlin.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MHD_fullBQlin.cc; sourceTree = "<group>"; };
+		A2EDFCB1197F054E0028A1A3 /* MHD_fullBQlin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MHD_fullBQlin.h; sourceTree = "<group>"; };
+		A2EDFCB7197F24280028A1A3 /* MMA_Generated_Equations_FullUBQlin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_Equations_FullUBQlin.cpp; sourceTree = "<group>"; };
+		A2EDFCB8197F571F0028A1A3 /* MHD_FullUBQlin.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MHD_FullUBQlin.cc; sourceTree = "<group>"; };
+		A2EDFCB9197F571F0028A1A3 /* MHD_FullUBQlin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MHD_FullUBQlin.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,6 +100,7 @@
 			isa = PBXGroup;
 			children = (
 				A2618DD0197EB8D9001EC9FD /* MMA_Generated_ReynoldsStresses.cpp */,
+				A2EDFCB7197F24280028A1A3 /* MMA_Generated_Equations_FullUBQlin.cpp */,
 				A2A3A6F719762869000C1024 /* MMA_Generated_Equations_BQlin.cpp */,
 				A2EDFCAB1978603B0028A1A3 /* MMA_Generated_Equations_fullBQlin.cpp */,
 				A2A3A6EB19756565000C1024 /* GenerateC++Equations.nb */,
@@ -162,10 +169,14 @@
 		A2BA0FB41912B15F00866A27 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A2EDFCB8197F571F0028A1A3 /* MHD_FullUBQlin.cc */,
+				A2EDFCB9197F571F0028A1A3 /* MHD_FullUBQlin.h */,
+				A2EDFCB0197F054E0028A1A3 /* MHD_fullBQlin.cc */,
+				A2EDFCB1197F054E0028A1A3 /* MHD_fullBQlin.h */,
 				A2A3A6E719756550000C1024 /* Model_AutoGen_template.cc */,
 				A2A3A6E819756550000C1024 /* Model_AutoGen_template.h */,
-				A20239B2194D3FFA00275CD9 /* MHD_BQlin.cc */,
-				A20239B3194D3FFA00275CD9 /* MHD_BQlin.h */,
+				A2EDFCAD197EE3A10028A1A3 /* MHD_BQlin.cc */,
+				A2EDFCAE197EE3A10028A1A3 /* MHD_BQlin.h */,
 				A2BA0FB71912B15F00866A27 /* Model.h */,
 				A250B1381937307A00218230 /* Constant_Damping.cc */,
 				A250B1391937307A00218230 /* Constant_Damping.h */,
@@ -245,15 +256,16 @@
 			files = (
 				A20A82B9193FE9BA00E2DF42 /* intRK2CN.cc in Sources */,
 				A2BA0FA11912A96C00866A27 /* main.cc in Sources */,
-				A20239B4194D3FFA00275CD9 /* MHD_BQlin.cc in Sources */,
-				A2A3A6E919756550000C1024 /* Model_AutoGen_template.cc in Sources */,
+				A2EDFCB2197F054E0028A1A3 /* MHD_fullBQlin.cc in Sources */,
 				A2ADBADE19169F860082125D /* intEulerCN.cc in Sources */,
 				A20239BE195B262400275CD9 /* TimeVariables.cc in Sources */,
+				A2EDFCBA197F571F0028A1A3 /* MHD_FullUBQlin.cc in Sources */,
 				A2546240191AD01B00920C0A /* MPIdata.cc in Sources */,
 				A2BA0FB11912B14900866A27 /* intEuler.cc in Sources */,
 				A20239BB195B257A00275CD9 /* fftwPlans.cc in Sources */,
 				A2ADBAE11917D7370082125D /* General_Auxiliary.cc in Sources */,
 				A254623A191A60B300920C0A /* Input_parameters.cc in Sources */,
+				A2EDFCAF197EE3A10028A1A3 /* MHD_BQlin.cc in Sources */,
 				A2BA0FC41912F44800866A27 /* Initialization_routines.cc in Sources */,
 				A250B13A1937307A00218230 /* Constant_Damping.cc in Sources */,
 			);

@@ -34,85 +34,98 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Inputs SP, Model* equatio
     int NXY = mpi.nxy();
     int numMF = equations->num_MFs();
     
-    /////////////////////////////////
-    //      EVERYTHING ZERO        //
-    
-    // Assign to all entries of Ckl
-    int nz = Ckl[0].rows();
-    for (int i=0; i<NXY; ++i) {
-        for (int j=0; j<nz; ++j) {
-            for (int k=0; k<nz; ++k)
-                Ckl[i](j,k)=dcmplx(0,0);
-        }
-        Ckl[i] += Ckl[i].adjoint().eval();
-        
-    }
-
-//    // Assign to mean fields
-//    for (int i=0; i<numMF; ++i) {
-//        for (int j=0; j<nz/4; ++j) {
-//            MF[i](j) = dcmplx(0,0);
+//    /////////////////////////////////
+//    //      EVERYTHING ZERO        //
+//    
+//    // Assign to all entries of Ckl
+//    int nz = Ckl[0].rows();
+//    for (int i=0; i<NXY; ++i) {
+//        for (int j=0; j<nz; ++j) {
+//            for (int k=0; k<nz; ++k)
+//                Ckl[i](j,k)=dcmplx(0,0);
 //        }
 //    }
 //    //                             //
 //    /////////////////////////////////
     
-//    /////////////////////////////////
-//    //   LOAD FROM (MATLAB) FILE   //
-//    
-//    // DOES NOT WORK WITH MPI - NEED TO UPGRADE
-//    std::string init_filename("/Users/jsquire/Documents/MRIDSS/MRIDSS/Data/SW_test/initial_conditions.dat");
-//    std::ifstream init_file(init_filename, std::ios::in | std::ios::binary);
-//    if (init_file.is_open()){
-//        // Read into Ckl
-//        long nzf = Ckl[0].rows();
-//        double *realbuf = new double[nzf*nzf];
-//        double *imagbuf = new double[nzf*nzf];
-//        for (int i=0; i<NXY; ++i) {
-//            init_file.read((char*)realbuf, sizeof(realbuf)*nzf*nzf);
-//            init_file.read((char*)imagbuf, sizeof(imagbuf)*nzf*nzf);
-//            
-//            dcmplx* Cp = Ckl[i].data();
-//            for (int i=0; i<nzf*nzf; i++) {
-//                Cp[i] = dcmplx(realbuf[i],imagbuf[i]);
-//            }
-////            std::cout << Ckl[i] << std::endl;
-////            std::cout << std::endl;
-//
-//        }
-//        init_file.close();
-//        // End if
-//        delete[] realbuf;
-//        delete[] imagbuf;
-//    }
-//    else {
-//        std::cout << "ERROR: Initial condition failed to open" << std::endl;
-//    }
+    
+    /////////////////////////////////
+    //   LOAD FROM (MATLAB) FILE   //
+    
+    // DOES NOT WORK WITH MPI - NEED TO UPGRADE
+    std::string init_filename("/Users/jsquire/Documents/MRIDSS/MRIDSS/Data/SW_test/initial_conditions.dat");
+    std::ifstream init_file(init_filename, std::ios::in | std::ios::binary);
+    if (init_file.is_open()){
+        // Read into Ckl
+        long nzf = Ckl[0].rows();
+        double *realbuf = new double[nzf*nzf];
+        double *imagbuf = new double[nzf*nzf];
+        for (int i=0; i<NXY; ++i) {
+            init_file.read((char*)realbuf, sizeof(realbuf)*nzf*nzf);
+            init_file.read((char*)imagbuf, sizeof(imagbuf)*nzf*nzf);
+            
+            dcmplx* Cp = Ckl[i].data();
+            for (int i=0; i<nzf*nzf; i++) {
+                Cp[i] = dcmplx(realbuf[i],imagbuf[i]);
+            }
+//            std::cout << Ckl[i] << std::endl;
+//            std::cout << std::endl;
 
+        }
+        init_file.close();
+        // End if
+        delete[] realbuf;
+        delete[] imagbuf;
+    }
+    else {
+        std::cout << "ERROR: Initial condition failed to open" << std::endl;
+    }
     // Assign to mean fields
     doubVec zg = doubVec::LinSpaced( MF[0].size(), 0, 2*PI*(1.0-1.0/MF[0].size()) );
     
     // Decide what MF initial conditions based on SP.initial_By
-    if (SP.initial_By > 0.0) { // Lowest Kz mode in the box, amplitude from SP.initial_By
-        MF[0].setZero();
-        for (int i=0; i<MF[0].size(); ++i) {
-            MF[1](i) = (dcmplx) SP.initial_By*cos( zg(i) );
+    
+//    MF[0].setZero();
+    for (int i=0; i<MF[0].size(); ++i) {
+        MF[1](i) = (dcmplx) 0.1*cos( zg(i) );
+        MF[0](i) = (dcmplx) 0.1*cos( zg(i) );
+        if (SP.equations_to_use == "MHD_FullUBQlin") {
+            MF[2](i) = (dcmplx) 0.1*sin( 2*zg(i) );
+            MF[3](i) = (dcmplx) 0.1*sin( 2*zg(i) );
         }
-    } else { // Sets to random in Bx and By, amplitude from SP.initial_By
-        // Sets to random in Bx and By
-        double mult_fac[2] = {-SP.initial_By, -0.1*SP.initial_By};
-        for (int i=0; i<numMF; ++i) {
-            MF[i].real().setRandom();
-            MF[i].imag().setZero();
-            MF[i] *= mult_fac[i];
-        }
-
     }
 
     // Take the Fourier transform
     for (int i=0; i<numMF; ++i) {
         fft.for_1D(MF[i].data());
     }
+
+    
+    
+//    // Assign to mean fields
+//    doubVec zg = doubVec::LinSpaced( MF[0].size(), 0, 2*PI*(1.0-1.0/MF[0].size()) );
+//    
+//    // Decide what MF initial conditions based on SP.initial_By
+//    if (SP.initial_By > 0.0) { // Lowest Kz mode in the box, amplitude from SP.initial_By
+//        MF[0].setZero();
+//        for (int i=0; i<MF[0].size(); ++i) {
+//            MF[1](i) = (dcmplx) SP.initial_By*cos( zg(i) );
+//        }
+//    } else { // Sets to random in Bx and By, amplitude from SP.initial_By
+//        // Sets to random in Bx and By
+//        double mult_fac[2] = {-SP.initial_By, -0.1*SP.initial_By};
+//        for (int i=0; i<numMF; ++i) {
+//            MF[i].real().setRandom();
+//            MF[i].imag().setZero();
+//            MF[i] *= mult_fac[i];
+//        }
+//
+//    }
+//
+//    // Take the Fourier transform
+//    for (int i=0; i<numMF; ++i) {
+//        fft.for_1D(MF[i].data());
+//    }
 
 
     

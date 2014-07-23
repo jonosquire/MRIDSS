@@ -10,7 +10,8 @@
 
 // Models
 #include "Models/MHD_BQlin.h"
-#include "Models/Model_AutoGen_template.h"
+#include "Models/MHD_fullBQlin.h"
+#include "Models/MHD_FullUBQlin.h"
 #include "Models/Constant_Damping.h"
 // Integrators
 #include "Integrators/intEuler.h"
@@ -44,7 +45,7 @@ int main(int argc, char ** argv)
 
     // Construct "model" object
     fftwPlans fft;
-    Model* fluidEqs = new Model_AutoGen_template(SP, mpi, fft);
+    Model* fluidEqs = new MHD_BQlin(SP, mpi, fft);
     const int num_MFs = fluidEqs->num_MFs();
     
     // Initialize solution
@@ -55,6 +56,7 @@ int main(int argc, char ** argv)
     
     // Intitial conditions
     InitialConditions(MF, Ckl, SP, fluidEqs,  mpi, fft); //can be changed by reading from FINAL_STATE
+
     
     // Load from FINAL_STATE if specified in input file
     if (SP.start_from_saved_Q) {
@@ -95,14 +97,6 @@ int main(int argc, char ** argv)
             time_vars.Save_Mean_Fields(MF,  fft);
             CheckSolution(MF, Ckl, fft);
         }
-        
-//        if (i%SP.num_before_remap == 0) {
-//            ShearingBox_Remap(fluidEqs, Ckl);
-//            t=0.0;
-//            std::stringstream remp;
-//            remp << "<<<< Remapping >>>>" << std::endl;
-//            //mpi.print1( remp.str() );
-//        }
         
         
         // Full save of all data

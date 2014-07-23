@@ -1,13 +1,13 @@
 //
-//  Model_AutoGen_template.h
+//  MHD_FullUBQlin.h
 //  MRIDSS
 //
 //  Created by Jonathan Squire on 4/25/14.
 //  Copyright (c) 2014 J Squire. All rights reserved.
 //
 
-#ifndef __MRIDSS__Model_AutoGen_template__
-#define __MRIDSS__Model_AutoGen_template__
+#ifndef __MRIDSS__MHD_FullUBQlin__
+#define __MRIDSS__MHD_FullUBQlin__
 
 
 #include "Model.h"
@@ -25,10 +25,10 @@
 // Model class for S3T/CE2 shearing box MHD model
 // Basic Quasi-linear MHD
 // Derived from Model (model.h)
-class Model_AutoGen_template : public Model {
+class MHD_FullUBQlin : public Model {
 public:
-    Model_AutoGen_template(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
-    ~Model_AutoGen_template();
+    MHD_FullUBQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
+    ~MHD_FullUBQlin();
     
     // Model name - for comparison wiht input file as a check
     const std::string equations_name;
@@ -121,21 +121,25 @@ private:
     // Real versions of MFs and derivatives
     dcmplxVecM By_, dzBy_, dzdzBy_;
     dcmplxVecM Bx_, dzBx_, dzdzBx_, dzdzdzBx_;
+    dcmplxVecM Uy_, dzUy_, dzdzUy_;
+    dcmplxVecM Ux_, dzUx_, dzdzUx_, dzdzdzUx_;
     
     // Reynolds stresses
     dcmplxMat reynolds_mat_tmp_; // Temporary matrix storage for fft
     
     // store both complex and double for fft and to pass less data around with MPI
-    dcmplxVec bzux_m_uzbx_c_; // bz*ux-uz*bx
-    dcmplxVec bzuy_m_uzby_c_; // bz*uy - uz*by
+    dcmplxVec bzux_m_uzbx_c_, bzuy_m_uzby_c_; // bz*ux-uz*bx and bz*uy - uz*by for B
+    dcmplxVec ux_rey_stress_c_, uy_rey_stress_c_;// U reynolds stresses
     // double
-    doubVec bzux_m_uzbx_d_, bzuy_m_uzby_d_; // stresses themselves (double)
-    doubVec reynolds_stress_MPI_send_, reynolds_stress_MPI_receive_; // mpi buffers
+    doubVec bzux_m_uzbx_d_, bzuy_m_uzby_d_; // B stresses  (double)
+    doubVec ux_rey_stress_d_, uy_rey_stress_d_;// U reynolds stresses
+    // mpi buffers
+    doubVec reynolds_stress_MPI_send_, reynolds_stress_MPI_receive_;
     
     double * reynolds_save_tmp_; // Saving the various contributions to mean-field dynamo
 
     // Automatically generated temporary variables for Reynolds stress- class definition
-    dcmplxVecM rey_TiLap2TkxbTky, rey_TdzTiLap2Tkxb, rey_TiLap2Tky, rey_TdzTiLap2;
+    dcmplxVecM rey_TdzTiLap2TkxbTky, rey_TiLap2TkxbTkyP2, rey_TiLap2TkxbP2Tky, rey_TiLap2TkxbTky, rey_TdzTiLap2Tkxb, rey_TdzTiLap2Tky, rey_TdzP2TiLap2, rey_TiLap2Tky, rey_TdzTiLap2, rey_Tdz;
 
     //////////////////////////////////////////////////////
     
@@ -144,11 +148,11 @@ private:
     //  AUTO GENERATED VARIABLES
     
     // Automatically generated temporary variables - class definition
-    dcmplxVecM T2Tdz, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzP2TkxbPLUSTkxbP3, TdzTiLap2Tkxb, TdzTiLap2TkxbP3PLUSTdzTkxb, TdzTqPLUSTm2Tdz, TiLap2TkxbP2Tky, TiLap2Tky, TkxbPLUSTm2TdzP2TiLap2Tkxb, Tm2TdzTiLap2Tky, TmdzTiLap2Tkxb, TmdzTq, TmiLap2TkxbP2Tky, TmiLap2Tky;
+    dcmplxVecM T2Tdz, T2TdzP2TiLap2Tkxb, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzTiLap2Tkxb, TdzTiLap2TkxbP3PLUSTmdzTkxb, TdzTkxbPLUSTmdzTiLap2TkxbP3, TdzTqPLUSTm2Tdz, TiLap2TkxbP2Tky, TiLap2TkxbTkyP2PLUSTmdzP2TiLap2Tkxb, TiLap2Tky, Tm2TdzP2TiLap2Tkxb, Tm2TdzTiLap2TkxbP2Tky, Tm2TdzTiLap2Tky, Tm2TiLap2TkxbTkyP2, TmdzTiLap2Tkxb, TmdzTq, TmiLap2TkxbP2Tky, TmiLap2Tky;
     
-    dcmplx Tkxb, TkxbTkyP2, Tky, Tm2TkxbTkyTq, Tmkxb, Tmky;
+    dcmplx Tkxb, Tky, Tm2TkxbTkyTq, Tmkxb, Tmky;
     
-    dcmplxMat Ctmp_1_, Ctmp_2_, Ctmp_3_, Ctmp_4_, Ctmp_5_, Ctmp_6_;
+    dcmplxMat Ctmp_1_, Ctmp_2_, Ctmp_3_, Ctmp_4_, Ctmp_5_, Ctmp_6_, Ctmp_7_, Ctmp_8_, Ctmp_9_, Ctmp_10_, Ctmp_11_, Ctmp_12_;
     
     dcmplxMat C11_, C12_, C13_, C14_, C21_, C22_, C23_, C24_, C31_, C32_, C33_, C34_, C41_, C42_, C43_, C44_;
 

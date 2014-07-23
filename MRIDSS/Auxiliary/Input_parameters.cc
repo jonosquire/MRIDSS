@@ -113,7 +113,7 @@ Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
 
         
         // Check that equations are the same as that specified in main
-        equations_to_use = Read_From_Input_File_<std::string>("equations_to_use_",fullfile,"no_equations");
+        equations_to_use = Read_From_Input_File_<std::string>("equations_to_use_",fullfile,"MHD_BQlin");// Set default so backwards compatible
         
         
     } else {

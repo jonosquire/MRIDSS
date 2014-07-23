@@ -8,12 +8,10 @@
 
 #include "MHD_BQlin.h"
 
-
 // Model class for S3T/CE2 shearing box MHD model
-// Basic Quasi-linear MHD
+// Template (not in c++ sense) for the equations to be copied into from automatically generated Mathematica file
 //
 // Derived from Model (model.h)
-
 
 // Constructor for MHD_BQlin
 MHD_BQlin::MHD_BQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) :
@@ -32,11 +30,10 @@ fft_(fft) // FFT data
         mpi.print1( error_str.str() );
         ABORT;
     }
-        
     
     // Dimensions that depend on model
     nz_Cfull_=num_fluct_*NZ_;
-    // Calcuate kx and ky arrays - single dimesnsion NX*NY(/2) to simplify parallelization
+    // Calcuate kx and ky arrays - single dimension NX*NY(/2) to simplify parallelization
     kx_ = new dcmplx[ nxy_full_ ]; // Entire kx_ and ky_ arrays are stored on all processors
     ky_ = new dcmplx[ nxy_full_ ];
     ky_index_ = new int[ nxy_full_ ];
@@ -65,26 +62,25 @@ fft_(fft) // FFT data
     totalN2_ = totalN2_*totalN2_;
     mult_noise_fac_ = 1.0/(16*32*32); // Defined so that consistent with (16, 32, 32) results
     mult_noise_fac_ = mult_noise_fac_*mult_noise_fac_;
+    // Factor for inverse transform in 2-D 1/NZ^2
+    fft2Dfac_=1.0/NZ_/NZ_;
+    fft1Dfac_ = 1.0/NZ_;
     
     // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
     dont_drive_ky0_modes_Q_ = 0;
     
     ////////////////////////////////////////////////////
     // Useful arrays to save computation
-    // ifft of identity and 1/lap2 etc.
-    
-    Set_fft_identity_();// fft of identity
-    Define_Lap2_Arrays_(); // Lap2 and ffts - Allocates data to lap2_,ilap2_,fft_ilap2_,fft_kzilap2_,fft_kz2ilap2_
-    
+    Define_Lap2_Arrays_(); // Lap2- Allocates data to lap2_,ilap2_
     
     // Reynolds stresses
     bzux_m_uzbx_c_ = dcmplxVec::Zero(NZ_);
     bzuy_m_uzby_c_ = dcmplxVec::Zero(NZ_);
     bzux_m_uzbx_d_ = doubVec::Zero(NZ_);
     bzuy_m_uzby_d_ = doubVec::Zero(NZ_);
-    // Receive buffers for MPI, for some reason MPI::IN_PLACE is not giving the correct result!
-    bzux_m_uzbx_drec_ = doubVec::Zero(NZ_);
-    bzuy_m_uzby_drec_ = doubVec::Zero(NZ_);
+    // Send/receive buffers for MPI, for some reason MPI::IN_PLACE is not giving the correct result!
+    reynolds_stress_MPI_send_ = doubVec::Zero(num_MF_*NZ_);
+    reynolds_stress_MPI_receive_ = doubVec::Zero(num_MF_*NZ_);
     
     reynolds_save_tmp_ = new double[5];
     
@@ -96,51 +92,69 @@ fft_(fft) // FFT data
     //  These are used during evaluation of the various parts of the model
     // There should never be any need to keep their value over more than 1 time-step
     
+    //////////////////////////////////////////////////
+    // These arrays are used for all sets of equations
     lapFtmp_ = doubVec( NZ_ ); //For (time-dependent) k^2
     ilapFtmp_ = doubVec( NZ_ ); // Inverse
     lap2tmp_ = doubVec( NZ_ ); // For ky^2+kz^2 - could be pre-assigned
     ilap2tmp_ = doubVec( NZ_ ); // Inverse
     // Qkl
     Qkl_tmp_ = doubVec( nz_Cfull_ );
-    
-    // A operator matrix - lots of submatrices
-    // Zero - A22 A32 A33 A34 A44
-    // Vectors
-    Aop_v11_ = dcmplxVecM(NZ_);
-    Aop_v12_ = dcmplxVecM(NZ_);
-    Aop_v21_ = dcmplxVecM(NZ_);
-    Aop_v43_ = dcmplxVecM(NZ_);
-    // Matrices
-    Aop_m13_= dcmplxMat(NZ_,NZ_);
-    Aop_m14_= dcmplxMat(NZ_,NZ_);
-    Aop_m23_= dcmplxMat(NZ_,NZ_);
-    Aop_m24_= dcmplxMat(NZ_,NZ_);
-    Aop_m31_= dcmplxMat(NZ_,NZ_);
-    Aop_m41_= dcmplxMat(NZ_,NZ_);
-    Aop_m42_= dcmplxMat(NZ_,NZ_);
-    Aop_block_tmp_= dcmplxMat(NZ_,NZ_); // Useful temporary
-    
-
-    // Ckl submatrices
-    C1_= dcmplxMat(NZ_,NZ_);
-    C2_= dcmplxMat(NZ_,NZ_);
-    C3_= dcmplxMat(NZ_,NZ_);
-    C4_= dcmplxMat(NZ_,NZ_);
+    //////////////////////////////////////////////////
 
 
-    
     // Real versions of B
-    rBy_tmp_ = dcmplxVec::Zero(NZ_);
-    rDzBy_tmp_ = dcmplxVec::Zero(NZ_);
-    rDzzBy_tmp_ = dcmplxVec::Zero(NZ_);
+    By_ = dcmplxVecM::Zero(NZ_);
+    dzBy_ = dcmplxVecM::Zero(NZ_);
+    dzdzBy_ = dcmplxVecM::Zero(NZ_);
     
-    // Reynolds stresses
+    // Reynolds stresses - this need to be changed to automatic also
     reynolds_mat_tmp_ = dcmplxMat(NZ_,NZ_);
-    // converting between u, zeta... and u, uy... for the Reynolds stresses
-    rey_mkxky_tmp_ = dcmplxVecM( NZ_ );
-    rey_kz_tmp_ = dcmplxVecM( NZ_ );
-    rey_mkxkz_tmp_ = dcmplxVecM( NZ_ );
-    rey_mky_tmp_ = dcmplxVecM( NZ_ );
+    // Automatically generated temporary variables - class constructor
+    rey_TiLap2TkxbTky = dcmplxVecM(NZ_);
+    rey_TdzTiLap2Tkxb = dcmplxVecM(NZ_);
+    rey_TiLap2Tky = dcmplxVecM(NZ_);
+    rey_TdzTiLap2 = dcmplxVecM(NZ_);
+    
+    
+    /////////////////////////////////////////////////
+    //  AUTO GENERATED VARIABLES
+    
+    // Automatically generated temporary variables - class constructor
+    T2Tdz = dcmplxVecM(NZ_);
+    T2TdzTiLap2TkxbP2Tky = dcmplxVecM(NZ_);
+    T2TdzTiLap2Tky = dcmplxVecM(NZ_);
+    T2TiLap2TkxbTkyP2 = dcmplxVecM(NZ_);
+    TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2 = dcmplxVecM(NZ_);
+    TdzTiLap2Tkxb = dcmplxVecM(NZ_);
+    TdzTqPLUSTm2Tdz = dcmplxVecM(NZ_);
+    TiLap2Tky = dcmplxVecM(NZ_);
+    TmdzTiLap2Tkxb = dcmplxVecM(NZ_);
+    TmdzTq = dcmplxVecM(NZ_);
+    TmiLap2Tky = dcmplxVecM(NZ_);
+    
+    Ctmp_1_ = dcmplxMat(NZ_,NZ_);
+    Ctmp_2_ = dcmplxMat(NZ_,NZ_);
+    Ctmp_3_ = dcmplxMat(NZ_,NZ_);
+    
+    C11_ = dcmplxMat(NZ_,NZ_);
+    C12_ = dcmplxMat(NZ_,NZ_);
+    C13_ = dcmplxMat(NZ_,NZ_);
+    C14_ = dcmplxMat(NZ_,NZ_);
+    C21_ = dcmplxMat(NZ_,NZ_);
+    C22_ = dcmplxMat(NZ_,NZ_);
+    C23_ = dcmplxMat(NZ_,NZ_);
+    C24_ = dcmplxMat(NZ_,NZ_);
+    C31_ = dcmplxMat(NZ_,NZ_);
+    C32_ = dcmplxMat(NZ_,NZ_);
+    C33_ = dcmplxMat(NZ_,NZ_);
+    C34_ = dcmplxMat(NZ_,NZ_);
+    C41_ = dcmplxMat(NZ_,NZ_);
+    C42_ = dcmplxMat(NZ_,NZ_);
+    C43_ = dcmplxMat(NZ_,NZ_);
+    C44_ = dcmplxMat(NZ_,NZ_);
+    /////////////////////////////////////////////////
+
 
 }
 
@@ -151,14 +165,8 @@ MHD_BQlin::~MHD_BQlin(){
     delete[] kx_;
     delete[] ky_;
     
-    // useful fft arrays
-    delete[] ky_index_;
     delete[] lap2_;
     delete[] ilap2_;
-    delete[] fft_ilap2_;
-    delete[] fft_kzilap2_;
-    delete[] fft_kz2ilap2_;
-    
     // Data arrays
     delete[] reynolds_save_tmp_;
 }
@@ -173,13 +181,13 @@ void MHD_BQlin::rhs(double t, double dt_lin,
     // If desired, the function should work fine with Ckl_in = Ckl_out. This is
     // useful for integration schemes that do not require re-use of Ckl_in
     
-    // Calculate MFs in real space - for this model, only need MF[2], ie., By
-    rBy_tmp_ = MFin[1]*(1.0/NZ_); // fft back doesn't include normalization
-    fft_.back_1D(rBy_tmp_.data());
-    rDzBy_tmp_ = kz_*MFin[1]*(1.0/NZ_);
-    fft_.back_1D(rDzBy_tmp_.data());
-    rDzzBy_tmp_ = kz2_*MFin[1]*(1.0/NZ_);
-    fft_.back_1D(rDzzBy_tmp_.data());
+    // Calculate MFs in real space - would be good to also include this in auto generation
+    By_ = MFin[1].matrix()*fft1Dfac_; // fft back doesn't include normalization
+    fft_.back_1D(By_.data());
+    dzBy_ = (kz_*MFin[1]).matrix()*fft1Dfac_;
+    fft_.back_1D(dzBy_.data());
+    dzdzBy_ = (kz2_*MFin[1]).matrix()*fft1Dfac_;
+    fft_.back_1D(dzdzBy_.data());
     
     // Reynolds stresses -- added to at each step in the loop
     bzux_m_uzbx_d_.setZero();
@@ -237,127 +245,293 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         ////////////////////////////////////////
         
         
-        
-        ////////////////////////////////////////
-        //                                    //
-        //      MAIN WORK - FORM OPMAT        //
-        //                                    //
-        
-        // To avoid problems, use kxctmp and kyctmp
-        
-        //  ROW 1
-        
-        // u u Component
-        // -2*q*ilapF*kxt*ky
-        Aop_v11_= ((-2*q_*kxctmp_*kyctmp_)*ilapFtmp_.cast<dcmplx>()).matrix();
-        
-        // u zeta Component
-        // 2*ilapF.*K.kz
-        Aop_v12_ = (2*ilapFtmp_*kz_).matrix();
-        
-        // u b Component
-        // dealiasmat.*( fft(ky*realB.*idft) + 2*kxt^2*ky*ilapF*fft(realDzB.*rilap2kz) )
-        Aop_m13_ = (fft_identity_.array().colwise()*(kyctmp_*rBy_tmp_)).matrix();
-        fft_.for_2D_dim1(Aop_m13_.data());
-        Aop_block_tmp_ = (fft_kzilap2_[ind_ky].array().colwise()*rDzBy_tmp_).matrix();
-        fft_.for_2D_dim1(Aop_block_tmp_.data());
-        Aop_m13_ +=
-            ((2.0*kxctmp_*kxctmp_*kyctmp_)*ilapFtmp_.cast<dcmplx>()).matrix().asDiagonal()*
-                Aop_block_tmp_;
-        dealias(Aop_m13_.data()); // Could also do delaliasing in assignment
-        // Final assignment done
-        
-        // u eta component
-        // dealiasmat.*( 2*kxt*ky^2*ilapF*fft( realDzB.*rilap2 )  )
-        Aop_m14_ = (fft_ilap2_[ind_ky].array().colwise()*rDzBy_tmp_).matrix();
-        fft_.for_2D_dim1(Aop_m14_.data());
-        Aop_m14_ =
-            ((2.0*kxctmp_*kyctmp_*kyctmp_)*ilapFtmp_.cast<dcmplx>()).matrix().asDiagonal()*
-                Aop_m14_;
-        dealias(Aop_m14_.data());
-        // Final assignment done
+        /////////////////////////////////////////
+        ///    INSERT VARIABLE DEFS HERE
         
         
-        // ROW 2
+        //Assign automatically generated variables in equations
+        // Submatrix variable definition (automatic)
+        C11_ = Ckl_in[i].block( 0, 0, NZ_, NZ_);
+        C12_ = Ckl_in[i].block( 0, NZ_, NZ_, NZ_);
+        C13_ = Ckl_in[i].block( 0, 2*NZ_, NZ_, NZ_);
+        C14_ = Ckl_in[i].block( 0, 3*NZ_, NZ_, NZ_);
+        C21_ = Ckl_in[i].block( NZ_, 0, NZ_, NZ_);
+        C22_ = Ckl_in[i].block( NZ_, NZ_, NZ_, NZ_);
+        C23_ = Ckl_in[i].block( NZ_, 2*NZ_, NZ_, NZ_);
+        C24_ = Ckl_in[i].block( NZ_, 3*NZ_, NZ_, NZ_);
+        C31_ = Ckl_in[i].block( 2*NZ_, 0, NZ_, NZ_);
+        C32_ = Ckl_in[i].block( 2*NZ_, NZ_, NZ_, NZ_);
+        C33_ = Ckl_in[i].block( 2*NZ_, 2*NZ_, NZ_, NZ_);
+        C34_ = Ckl_in[i].block( 2*NZ_, 3*NZ_, NZ_, NZ_);
+        C41_ = Ckl_in[i].block( 3*NZ_, 0, NZ_, NZ_);
+        C42_ = Ckl_in[i].block( 3*NZ_, NZ_, NZ_, NZ_);
+        C43_ = Ckl_in[i].block( 3*NZ_, 2*NZ_, NZ_, NZ_);
+        C44_ = Ckl_in[i].block( 3*NZ_, 3*NZ_, NZ_, NZ_);
         
-        // zeta u
-        // (q-2)*K.kz
-        Aop_v21_ = ((q_-2.0)*kz_).matrix();
+        // Scalar variable definition (automatic)
+        Tky = (kyctmp_)*fft2Dfac_;
+        Tm2TkxbTkyTq = ((-2.*(kxctmp_*kyctmp_))*q_)*fft2Dfac_;
+        Tmkxb = ((-1.*kxctmp_))*fft2Dfac_;
         
-        // zeta zeta
-        // 0
-        
-        // zeta b
-        // dealiasmat.*( fft(-kxt*realDzzB.*rilap2kz-kxt*realDzB.*idft) )
-        Aop_m23_ = (  fft_kzilap2_[ind_ky].array().colwise()*((-kxctmp_)*rDzzBy_tmp_) +
-            fft_identity_.array().colwise()*(-kxctmp_*rDzBy_tmp_)  ).matrix();
-        fft_.for_2D_dim1(Aop_m23_.data());
-        dealias(Aop_m23_.data());
-        // Final assignment done
-        
-        // zeta eta
-        // dealiasmat.*( fft( ky*realB.*idft - ky*realDzzB.*rilap2 ))
-        Aop_m24_ = (  fft_ilap2_[ind_ky].array().colwise()*((-kyctmp_)*rDzzBy_tmp_) +
-            fft_identity_.array().colwise()*(kyctmp_*rBy_tmp_)  ).matrix();
-        fft_.for_2D_dim1(Aop_m24_.data());
-        dealias(Aop_m24_.data());
-        // Final assignment done
+        // Vector variable definition (automatic)
+        T2Tdz = (2.*kz_.matrix())*fft2Dfac_;
+        T2TdzTiLap2TkxbP2Tky = ((2.*(kyctmp_*pow(kxctmp_,2)))*(ilap2tmp_*kz_).matrix())*fft2Dfac_;
+        T2TdzTiLap2Tky = ((2.*kyctmp_)*(ilap2tmp_*kz_).matrix())*fft2Dfac_;
+        T2TiLap2TkxbTkyP2 = ((2.*(kxctmp_*pow(kyctmp_,2)))*ilap2tmp_.matrix())*fft2Dfac_;
+        TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2 = ((-1.*(kxctmp_*pow(kyctmp_,2)))*ilap2tmp_.matrix() + (ilap2tmp_*kz2_).matrix()*kxctmp_)*fft2Dfac_;
+        TdzTiLap2Tkxb = ((ilap2tmp_*kz_).matrix()*kxctmp_)*fft2Dfac_;
+        TdzTqPLUSTm2Tdz = (-2.*kz_.matrix() + kz_.matrix()*q_)*fft2Dfac_;
+        TiLap2Tky = (ilap2tmp_.matrix()*kyctmp_)*fft2Dfac_;
+        TmdzTiLap2Tkxb = ((-1.*kxctmp_)*(ilap2tmp_*kz_).matrix())*fft2Dfac_;
+        TmdzTq = ((-1.*q_)*kz_.matrix())*fft2Dfac_;
+        TmiLap2Tky = ((-1.*kyctmp_)*ilap2tmp_.matrix())*fft2Dfac_;
 
         
-        // ROW 3
+        
+        /////////////////////////////////////////
+        ///    INSERT EQUATIONS HERE
+//        std::cout << "kx = " << kxtmp_ << ", ky = " << kytmp_ << std::endl;
+//        std::cout << Ctmp_4_ << std::endl << std::endl;
+        
+        ////////////////////////////////////////////////////////
+        ///       AUTOMATICALLY GENERATED EQUATIONS         /////
+        ///       see GenerateC++Equations.nb in MMA        /////
+        
+        Ctmp_1_ = Tky*C31_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = T2TdzTiLap2TkxbP2Tky.asDiagonal()*C31_ + T2TiLap2TkxbTkyP2.asDiagonal()*C41_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
+        fft_.for_2DFull( Ctmp_1_ );
+        fft_.for_2DFull( Ctmp_2_ );
+        Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C21_ + (Tm2TkxbTkyTq/fft2Dfac_)*C11_);
+        dealias(Ctmp_2_);
+        Ckl_out[i].block( 0, 0, NZ_, NZ_) = Ctmp_2_;
+        
+        
+        
+        Ctmp_1_ = Tky*C32_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = T2TdzTiLap2TkxbP2Tky.asDiagonal()*C32_ + T2TiLap2TkxbTkyP2.asDiagonal()*C42_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
+        fft_.for_2DFull( Ctmp_1_ );
+        fft_.for_2DFull( Ctmp_2_ );
+        Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C22_ + (Tm2TkxbTkyTq/fft2Dfac_)*C12_);
+        dealias(Ctmp_2_);
+        Ckl_out[i].block( 0, NZ_, NZ_, NZ_) = Ctmp_2_;
+        
+        
+        
+        Ctmp_1_ = Tky*C33_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = T2TdzTiLap2TkxbP2Tky.asDiagonal()*C33_ + T2TiLap2TkxbTkyP2.asDiagonal()*C43_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
+        fft_.for_2DFull( Ctmp_1_ );
+        fft_.for_2DFull( Ctmp_2_ );
+        Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C23_ + (Tm2TkxbTkyTq/fft2Dfac_)*C13_);
+        dealias(Ctmp_2_);
+        Ckl_out[i].block( 0, 2*NZ_, NZ_, NZ_) = Ctmp_2_;
+        
+        
+        
+        Ctmp_1_ = Tky*C34_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = T2TdzTiLap2TkxbP2Tky.asDiagonal()*C34_ + T2TiLap2TkxbTkyP2.asDiagonal()*C44_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
+        fft_.for_2DFull( Ctmp_1_ );
+        fft_.for_2DFull( Ctmp_2_ );
+        Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C24_ + (Tm2TkxbTkyTq/fft2Dfac_)*C14_);
+        dealias(Ctmp_2_);
+        Ckl_out[i].block( 0, 3*NZ_, NZ_, NZ_) = Ctmp_2_;
+        
+        
+        
+        Ctmp_1_ = Tky*C41_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = TmdzTiLap2Tkxb.asDiagonal()*C31_ + TmiLap2Tky.asDiagonal()*C41_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzdzBy_.asDiagonal()*Ctmp_2_;
+        Ctmp_3_ = Tmkxb*C31_;
+        fft_.back_2DFull( Ctmp_3_ );
+        Ctmp_3_ = dzBy_.asDiagonal()*Ctmp_3_;
+        Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
+        fft_.for_2DFull( Ctmp_1_ );
+        Ctmp_3_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C11_;
+        dealias(Ctmp_3_);
+        Ckl_out[i].block( NZ_, 0, NZ_, NZ_) = Ctmp_3_;
+        
+        
+        
+        Ctmp_1_ = Tky*C42_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = TmdzTiLap2Tkxb.asDiagonal()*C32_ + TmiLap2Tky.asDiagonal()*C42_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzdzBy_.asDiagonal()*Ctmp_2_;
+        Ctmp_3_ = Tmkxb*C32_;
+        fft_.back_2DFull( Ctmp_3_ );
+        Ctmp_3_ = dzBy_.asDiagonal()*Ctmp_3_;
+        Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
+        fft_.for_2DFull( Ctmp_1_ );
+        Ctmp_3_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C12_;
+        dealias(Ctmp_3_);
+        Ckl_out[i].block( NZ_, NZ_, NZ_, NZ_) = Ctmp_3_;
+        
+        
+        
+        Ctmp_1_ = Tky*C43_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = TmdzTiLap2Tkxb.asDiagonal()*C33_ + TmiLap2Tky.asDiagonal()*C43_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzdzBy_.asDiagonal()*Ctmp_2_;
+        Ctmp_3_ = Tmkxb*C33_;
+        fft_.back_2DFull( Ctmp_3_ );
+        Ctmp_3_ = dzBy_.asDiagonal()*Ctmp_3_;
+        Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
+        fft_.for_2DFull( Ctmp_1_ );
+        Ctmp_3_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C13_;
+        dealias(Ctmp_3_);
+        Ckl_out[i].block( NZ_, 2*NZ_, NZ_, NZ_) = Ctmp_3_;
+        
+        
+        
+        Ctmp_1_ = Tky*C44_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = TmdzTiLap2Tkxb.asDiagonal()*C34_ + TmiLap2Tky.asDiagonal()*C44_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzdzBy_.asDiagonal()*Ctmp_2_;
+        Ctmp_3_ = Tmkxb*C34_;
+        fft_.back_2DFull( Ctmp_3_ );
+        Ctmp_3_ = dzBy_.asDiagonal()*Ctmp_3_;
+        Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
+        fft_.for_2DFull( Ctmp_1_ );
+        Ctmp_3_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C14_;
+        dealias(Ctmp_3_);
+        Ckl_out[i].block( NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_3_;
+        
+        
+        
+        Ctmp_1_ = Tky*C11_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        fft_.for_2DFull( Ctmp_1_ );
+        dealias(Ctmp_1_);
+        Ckl_out[i].block( 2*NZ_, 0, NZ_, NZ_) = Ctmp_1_;
+        
+        
+        
+        Ctmp_1_ = Tky*C12_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        fft_.for_2DFull( Ctmp_1_ );
+        dealias(Ctmp_1_);
+        Ckl_out[i].block( 2*NZ_, NZ_, NZ_, NZ_) = Ctmp_1_;
+        
+        
+        
+        Ctmp_1_ = Tky*C13_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        fft_.for_2DFull( Ctmp_1_ );
+        dealias(Ctmp_1_);
+        Ckl_out[i].block( 2*NZ_, 2*NZ_, NZ_, NZ_) = Ctmp_1_;
+        
+        
+        
+        Ctmp_1_ = Tky*C14_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        fft_.for_2DFull( Ctmp_1_ );
+        dealias(Ctmp_1_);
+        Ckl_out[i].block( 2*NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_1_;
+        
+        
+        
+        Ctmp_1_ = Tky*C21_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = T2TdzTiLap2Tky.asDiagonal()*C21_ + TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2.asDiagonal()*C11_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
+        Ctmp_3_ = TdzTiLap2Tkxb.asDiagonal()*C11_ + TiLap2Tky.asDiagonal()*C21_;
+        fft_.back_2DFull( Ctmp_3_ );
+        Ctmp_3_ = dzdzBy_.asDiagonal()*Ctmp_3_;
+        Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
+        fft_.for_2DFull( Ctmp_1_ );
+        Ctmp_3_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C31_;
+        dealias(Ctmp_3_);
+        Ckl_out[i].block( 3*NZ_, 0, NZ_, NZ_) = Ctmp_3_;
+        
+        
+        
+        Ctmp_1_ = Tky*C22_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = T2TdzTiLap2Tky.asDiagonal()*C22_ + TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2.asDiagonal()*C12_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
+        Ctmp_3_ = TdzTiLap2Tkxb.asDiagonal()*C12_ + TiLap2Tky.asDiagonal()*C22_;
+        fft_.back_2DFull( Ctmp_3_ );
+        Ctmp_3_ = dzdzBy_.asDiagonal()*Ctmp_3_;
+        Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
+        fft_.for_2DFull( Ctmp_1_ );
+        Ctmp_3_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C32_;
+        dealias(Ctmp_3_);
+        Ckl_out[i].block( 3*NZ_, NZ_, NZ_, NZ_) = Ctmp_3_;
+        
+        
+        
+        Ctmp_1_ = Tky*C23_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = T2TdzTiLap2Tky.asDiagonal()*C23_ + TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2.asDiagonal()*C13_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
+        Ctmp_3_ = TdzTiLap2Tkxb.asDiagonal()*C13_ + TiLap2Tky.asDiagonal()*C23_;
+        fft_.back_2DFull( Ctmp_3_ );
+        Ctmp_3_ = dzdzBy_.asDiagonal()*Ctmp_3_;
+        Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
+        fft_.for_2DFull( Ctmp_1_ );
+        Ctmp_3_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C33_;
+        dealias(Ctmp_3_);
+        Ckl_out[i].block( 3*NZ_, 2*NZ_, NZ_, NZ_) = Ctmp_3_;
+        
+        
+        
+        Ctmp_1_ = Tky*C24_;
+        fft_.back_2DFull( Ctmp_1_ );
+        Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
+        Ctmp_2_ = T2TdzTiLap2Tky.asDiagonal()*C24_ + TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2.asDiagonal()*C14_;
+        fft_.back_2DFull( Ctmp_2_ );
+        Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
+        Ctmp_3_ = TdzTiLap2Tkxb.asDiagonal()*C14_ + TiLap2Tky.asDiagonal()*C24_;
+        fft_.back_2DFull( Ctmp_3_ );
+        Ctmp_3_ = dzdzBy_.asDiagonal()*Ctmp_3_;
+        Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
+        fft_.for_2DFull( Ctmp_1_ );
+        Ctmp_3_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C34_;
+        dealias(Ctmp_3_);
+        Ckl_out[i].block( 3*NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_3_;
+        ///     AUTOMATICALLY GENERATED EQUATIONS - END       ///
+        ////////////////////////////////////////////////////////
 
-        // b u
-        // dealiasmat.*( fft(ky*realB.*idft) )
-        Aop_m31_ = (  fft_identity_.array().colwise()*(kyctmp_*rBy_tmp_)  ).matrix();
-        fft_.for_2D_dim1(Aop_m31_.data());
-        dealias(Aop_m31_.data());
-        // Final assignment done
+
         
-        // b zeta
-        // 0
-        
-        // b b
-        // 0 (except linear)
-        
-        // b eta
-        //0
-        
-        
-        // ROW 4
-        
-        // eta u
-        // dealiasmat.*(fft( 2*kxt*realDzB.*ifft(ilap2.*K.kz.^2) + kxt*realDzzB.*rilap2kz - kxt*realDzB.*idft  ))
-        Aop_m41_ =
-            (  fft_kz2ilap2_[ind_ky].array().colwise()*((2.0*kxctmp_)*rDzBy_tmp_) +
-            fft_kzilap2_[ind_ky].array().colwise()*(kxctmp_*rDzzBy_tmp_)  +
-            fft_identity_.array().colwise()*((-kxctmp_)*rDzBy_tmp_)  ).matrix();
-        fft_.for_2D_dim1(Aop_m41_.data());
-        dealias(Aop_m41_.data());
-        
-        // eta zeta
-        // dealiasmat.*(fft(  ky*realB.*idft + 2*ky*realDzB.*rilap2kz + ky*realDzzB.*rilap2  ))
-        Aop_m42_ =
-            (  fft_ilap2_[ind_ky].array().colwise()*(kyctmp_*rDzzBy_tmp_) +
-             fft_kzilap2_[ind_ky].array().colwise()*((2.0*kyctmp_)*rDzBy_tmp_)  +
-             fft_identity_.array().colwise()*(kyctmp_*rBy_tmp_)  ).matrix();
-        fft_.for_2D_dim1(Aop_m42_.data());
-        dealias(Aop_m42_.data());
-        
-        
-        // eta b
-        // -q*K.kz
-        Aop_v43_ = ((-q_)*kz_).matrix();
-        
-        // eta eta
-        // 0
-        
-        //                                    //
-        ////////////////////////////////////////
-        
-        
+        /////                                ////
+        /////////////////////////////////////////
         
 
-//    if (QL_YN_) { Since I almost always want the Reynolds stress in a linear calculation better to still calculate and only change the MF feedback
+        //Since I almost always want the Reynolds stress in a linear calculation better to still calculate and only change the MF feedback
         ///////////////////////////////////////////////////////////
         //////                                               //////
         //////             REYNOLDS STRESSES                 //////
@@ -378,20 +552,19 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         if (kytmp_== 0.0 )
             mult_fac = 1.0; // Only count ky=0 mode once
         
-        double ftfac = mult_fac/(NZ_*NZ_); // NZ^2 factor for ifft is included here - more efficient since scalar
-        // These are Eigen matrices instead, just for asDiagonal
-        rey_mkxky_tmp_ = (-kyctmp_*kxctmp_ )*ilap2tmp_.cast<dcmplx>().matrix();
-        rey_kz_tmp_ = (kz_*ilap2tmp_).matrix();
-        rey_mkxkz_tmp_ = ((-kxctmp_ )*kz_*ilap2tmp_).matrix();
-        rey_mky_tmp_ = (-kyctmp_ )*ilap2tmp_.cast<dcmplx>().matrix();
+        double ftfac = mult_fac*fft2Dfac_; // NZ^2 factor for ifft is included here - more efficient since scalar
+
+        //Assign automatically generated variables in equations
+        // Vector variable definition Reynolds stress (automatic)
+        rey_TiLap2TkxbTky = ilap2tmp_.cast<dcmplx>().matrix()*(kxctmp_*kyctmp_);
+        rey_TdzTiLap2Tkxb = (ilap2tmp_*kz_).matrix()*kxctmp_;
+        rey_TiLap2Tky = ilap2tmp_.cast<dcmplx>().matrix()*kyctmp_;
+        rey_TdzTiLap2 = (ilap2tmp_*kz_).matrix();
         
         // CAN PROBABLY REDUCE THE COMPUTATION BY HALF BY USING Ckl SYMMETRY!
         // bz*ux - uz*bx
-        // bz*ux
-        reynolds_mat_tmp_ = rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block( 2*NZ_, 0, NZ_, NZ_) +rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(3*NZ_, 0,NZ_, NZ_);
-        // - uz*bx
-        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block(0,2*NZ_, NZ_, NZ_) +
-             rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(NZ_, 2*NZ_,NZ_, NZ_) ;
+        // Bx reynolds stress
+        reynolds_mat_tmp_ = C31_*rey_TdzTiLap2Tkxb.asDiagonal()-C32_*rey_TiLap2Tky.asDiagonal()-rey_TdzTiLap2Tkxb.asDiagonal()*C31_-rey_TiLap2Tky.asDiagonal()*C41_;
         
         // fft(fft( a )')'
         fft_.back_2DFull(reynolds_mat_tmp_);
@@ -400,21 +573,13 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         bzux_m_uzbx_d_ += ftfac*(reynolds_mat_tmp_.diagonal().array().real());
         
         // bz*uy - uz*by
-        // bz*uy
-        reynolds_mat_tmp_ = rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block(0,2*NZ_, NZ_, NZ_)*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ += rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block(NZ_,2*NZ_, NZ_, NZ_)*rey_kz_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ += rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(0,3*NZ_, NZ_, NZ_)*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ += rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(NZ_,3*NZ_, NZ_, NZ_)*rey_kz_tmp_.conjugate().asDiagonal();
-        // -uz*by
-        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block( 2*NZ_,0, NZ_, NZ_)*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ -= rey_mkxkz_tmp_.asDiagonal()*Ckl_in[i].block(3*NZ_, 0, NZ_, NZ_)*rey_kz_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ -= rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(2*NZ_, NZ_, NZ_, NZ_)*rey_mkxky_tmp_.conjugate().asDiagonal();
-        reynolds_mat_tmp_ -= rey_mky_tmp_.asDiagonal()*Ckl_in[i].block(3*NZ_, NZ_, NZ_, NZ_)*rey_kz_tmp_.conjugate().asDiagonal();
+        // By reynolds stress
+        reynolds_mat_tmp_ = rey_TdzTiLap2.asDiagonal()*C41_*rey_TdzTiLap2Tkxb.asDiagonal()+rey_TdzTiLap2Tkxb.asDiagonal()*C31_*rey_TiLap2TkxbTky.asDiagonal()+rey_TdzTiLap2Tkxb.asDiagonal()*C32_*rey_TdzTiLap2.asDiagonal()+rey_TiLap2TkxbTky.asDiagonal()*C32_*rey_TiLap2Tky.asDiagonal()+rey_TiLap2Tky.asDiagonal()*C41_*rey_TiLap2TkxbTky.asDiagonal()+rey_TiLap2Tky.asDiagonal()*C42_*rey_TdzTiLap2.asDiagonal()-rey_TdzTiLap2.asDiagonal()*C42_*rey_TiLap2Tky.asDiagonal()-rey_TiLap2TkxbTky.asDiagonal()*C31_*rey_TdzTiLap2Tkxb.asDiagonal();
         // fft(fft( a )')'
         fft_.back_2DFull(reynolds_mat_tmp_);
         
         // Keep a running sum
-        bzuy_m_uzby_d_ -= ftfac*(reynolds_mat_tmp_.diagonal().array().real());
+        bzuy_m_uzby_d_ += ftfac*(reynolds_mat_tmp_.diagonal().array().real());
         
         
         
@@ -422,61 +587,15 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         ///////////////////////////////////////////////////////////
     
         
-        /////////////////////////////////////////
-        //    Multiply to get RHS              //
-        
-        // Should experiment with putting this before Reynolds stress, may help stability
-        
-        // With the block method of matrix multiplication I can no longer use Ckl_out = Ckl_in
-        // to save memory in the integrator!
-        // This may be very slightly slower, but it was probably a bad idea anyway, given how easy it was to make a mistake with such a method
-        
-        // A*C matrix product - rather complicated due to all the submatrices
-        
-        
-        
-        //////////DEBUG - DELETE //////////
-        dcmplxMat Ctmp = dcmplxMat(NZ_,NZ_);
-        for (int j=0; j<4; ++j) {
-            for (int k=0; k<4; ++k) {
-                Ctmp = Ckl_in[i].block(j*NZ_,k*NZ_, NZ_, NZ_);
-                dealias(Ctmp.data());
-                Ckl_in[i].block(j*NZ_,k*NZ_, NZ_, NZ_) = Ctmp;
-            }
-        }
-        
-        
-        // Block_Matrix_Mult_ updates each given of Ckl_out
-        Block_Matrix_Mult_(0, Ckl_in[i], Ckl_out[i]);//COLUMN 0
-        Block_Matrix_Mult_(1, Ckl_in[i], Ckl_out[i]);//COLUMN 1
-        Block_Matrix_Mult_(2, Ckl_in[i], Ckl_out[i]);//COLUMN 2
-        Block_Matrix_Mult_(3, Ckl_in[i], Ckl_out[i]);//COLUMN 3
-    
-//        std::cout << "kx = " << kxtmp_ << ", ky = " << kytmp_ << std::endl;
-//        std::cout << Ckl_out[i].block( 3*NZ_, 0, NZ_, NZ_) << std::endl << std::endl;
         // Add to adjoint
         Ckl_out[i] += Ckl_out[i].adjoint().eval();
-
+        
 //        std::cout << "kx = " << kxtmp_ << ", ky = " << kytmp_ << std::endl;
 //        std::cout << Ckl_out[i] << std::endl << std::endl;
 
-        
         // Add driving noise
         Ckl_out[i] += Qkl_tmp_.cast<dcmplx>().matrix().asDiagonal();
         
-        //        // PRINTING FOR DEBUG
-        //        for (int i=0; i<Cdimz(); ++i) {
-        //            for (int j=0; j<Cdimz(); ++j){
-        //                if (imag(Aop_tmp_(i,j))<0.00001 && imag(Aop_tmp_(i,j))>-0.00001) {
-        //                    Aop_tmp_(i,j).imag(0);
-        //                }
-        //                if (real(Aop_tmp_(i,j))<0.00001 && real(Aop_tmp_(i,j))>-0.00001) {
-        //                    Aop_tmp_(i,j).real(0);
-        //                }
-        //            }
-        //        }
-        //        std::cout << "kx = " << kxtmp_ << ", ky = " << kytmp_ << std::endl;
-        //        std::cout << Aop_tmp_ << std::endl;
         
         ////////////////////////////////////////
         //////   LINEAR PART
@@ -491,36 +610,31 @@ void MHD_BQlin::rhs(double t, double dt_lin,
 
         
     }
-//    if (QL_YN_) { Since I almost always want the Reynolds stress in a linear calculation better to still calculate and only change the MF feedback
-        //////////////////////////////////////
-        // Reynolds stress
-        // Sum accross all processes
-        
-        // FOR SOME REASON MPI::IN_PLACE IS GIVING INCORRECT RESULTS!
-//        mpi_.SumAllReduce_IP_double(bzux_m_uzbx_d_.data(), NZ_);
-//        mpi_.SumAllReduce_IP_double(bzuy_m_uzby_d_.data(), NZ_);
-        mpi_.SumAllReduce_double(bzux_m_uzbx_d_.data(), bzux_m_uzbx_drec_.data(), NZ_);
-        mpi_.SumAllReduce_double(bzuy_m_uzby_d_.data(), bzuy_m_uzby_drec_.data(), NZ_);
-        
-        // Convert to complex - didn't seem worth the effort of fftw real transforms as time spent here (and in MF transforms) will be very minimal
-        
-        bzux_m_uzbx_c_ = bzux_m_uzbx_drec_.cast<dcmplx>();
-        bzuy_m_uzby_c_ = bzuy_m_uzby_drec_.cast<dcmplx>();
-        
-        // Calculate stresses in Fourier space
-        fft_.for_1D(bzux_m_uzbx_c_.data());
-        fft_.for_1D(bzuy_m_uzby_c_.data());
-        
-        double ftfac = 1.0/(Nxy_[0]*2*Nxy_[1]);ftfac=ftfac*ftfac;
-        bzux_m_uzbx_c_ = ftfac*kz_*bzux_m_uzbx_c_;
-        bzuy_m_uzby_c_ = ftfac*kz_*bzuy_m_uzby_c_;
-        dealias(bzux_m_uzbx_c_);
-        dealias(bzuy_m_uzby_c_);
-        //////////////////////////////////////
-//    } else { // Set Reynolds stress to zero
-//        bzux_m_uzbx_c_.setZero();
-//        bzuy_m_uzby_c_.setZero();
-//    }
+    // Since I almost always want the Reynolds stress in a linear calculation better to still calculate and only change the MF feedback
+    //////////////////////////////////////
+    // Reynolds stress
+    // Sum accross all processes
+    
+    reynolds_stress_MPI_send_ << bzux_m_uzbx_d_, bzuy_m_uzby_d_;// Put into a single variable to reduce mpi calls
+    
+    // FOR SOME REASON MPI::IN_PLACE IS GIVING INCORRECT RESULTS!
+    mpi_.SumAllReduce_double(reynolds_stress_MPI_send_.data(), reynolds_stress_MPI_receive_.data(), num_MFs()*NZ_);
+    // Extract from ..._receive_ variable and convert to complex
+    // (didn't seem worth the effort of fftw real transforms as time spent here (and in MF transforms) will be very minimal)
+    bzux_m_uzbx_c_ = reynolds_stress_MPI_receive_.segment(0,NZ_).cast<dcmplx>();
+    bzuy_m_uzby_c_ = reynolds_stress_MPI_receive_.segment(NZ_,NZ_).cast<dcmplx>();
+    
+    // Calculate stresses in Fourier space
+    fft_.for_1D(bzux_m_uzbx_c_.data());
+    fft_.for_1D(bzuy_m_uzby_c_.data());
+    
+    double ftfac = 1.0/(Nxy_[0]*2*Nxy_[1]);ftfac=ftfac*ftfac;
+    bzux_m_uzbx_c_ = ftfac*kz_*bzux_m_uzbx_c_;
+    bzuy_m_uzby_c_ = ftfac*kz_*bzuy_m_uzby_c_;
+    dealias(bzux_m_uzbx_c_);
+    dealias(bzuy_m_uzby_c_);
+    //////////////////////////////////////
+
 
     
     //////////////////////////////////////
@@ -528,7 +642,6 @@ void MHD_BQlin::rhs(double t, double dt_lin,
     // In some integrators MFout will be the same as MFin.
     // Because of this, important to calculate MFout[1] first, since it depends on MFin[1], and this would be updated otherwise
     // Changed this, should be safer now
-    
     if (QL_YN_) {
         MFout[1] = -q_*MFin[0] + bzuy_m_uzby_c_;
         MFout[0] = bzux_m_uzbx_c_;
@@ -575,21 +688,25 @@ void MHD_BQlin::linearOPs_Init(double t0, doubVec * linop_MF, doubVec * linop_Ck
 
 //////////////////////////////////////////////////////////
 ////                DEALIASING                      //////
+
+
 // Applies dealiasing to 2-D matrix of size NZ_ in z Fourier space
-void MHD_BQlin::dealias(dcmplx *arr) {
+void MHD_BQlin::dealias(dcmplxMat &inMat) {
+    dcmplx * arr = inMat.data();
     // Could also use Block here, might be faster
     for (int j=delaiasBnds_[0]; j<delaiasBnds_[1]+1; ++j){
         for (int i=0; i<NZ_; ++i) {
-             arr[i+NZ_*j]=0; // Column major, not that it makes any difference
+            arr[i+NZ_*j]=0; // Column major, not that it makes any difference
         }
     }
-
+    
     for (int j=0; j<NZ_; ++j) {
         for (int i=delaiasBnds_[0]; i<delaiasBnds_[1]+1; ++i){
             arr[i+NZ_*j]=0; // Column major, not that it makes any difference
         }
     }
 }
+
 //1-D version - takes a dcmplxVec input
 void MHD_BQlin::dealias(dcmplxVec& vec) {
     for (int j=delaiasBnds_[0]; j<delaiasBnds_[1]+1; ++j){
@@ -604,33 +721,6 @@ void MHD_BQlin::dealias(doubVec& vec) {
     }
 }
 //////////////////////////////////////////////////////////
-
-
-
-
-
-//////////////////////////////////////////////////////
-//    BLOCK MATRIX MULTIPLICATION                   //
-
-void MHD_BQlin::Block_Matrix_Mult_(int column, dcmplxMat& Ckl_in_i, dcmplxMat& Ckl_out_i) {
-    // Update a column of Ckl_out in a block matrix multiplication
-    // column is the desired column
-    // Ckl_in/out is reference to Ckl_in/out
-    // Rest of the bits are members of the class
-    // NB: Best as a column since it is A*C not C*A
-    C1_ = Ckl_in_i.block( 0,    column*NZ_, NZ_, NZ_);
-    C2_ = Ckl_in_i.block( NZ_,  column*NZ_, NZ_, NZ_);
-    C3_ = Ckl_in_i.block( 2*NZ_,column*NZ_, NZ_, NZ_);
-    C4_ = Ckl_in_i.block( 3*NZ_,column*NZ_, NZ_, NZ_);
-    // Product
-    Ckl_out_i.block( 0,     column*NZ_, NZ_, NZ_) =
-    Aop_v11_.asDiagonal()*C1_+Aop_v12_.asDiagonal()*C2_+Aop_m13_*C3_+Aop_m14_*C4_;
-    Ckl_out_i.block( NZ_,   column*NZ_, NZ_, NZ_) =
-    Aop_v21_.asDiagonal()*C1_+Aop_m23_*C3_+Aop_m24_*C4_;
-    Ckl_out_i.block( 2*NZ_, column*NZ_,  NZ_, NZ_) = Aop_m31_*C1_;
-    Ckl_out_i.block( 3*NZ_, column*NZ_, NZ_, NZ_) =
-    Aop_m41_*C1_+Aop_m42_*C2_+Aop_v43_.asDiagonal()*C3_;
-}
 
 
 
@@ -700,14 +790,14 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
             //   Angular momentum
             
             // These are Eigen matrices instead, just for asDiagonal
-            rey_mkxky_tmp_ = (-kyctmp_*kxctmp_ )*ilap2tmp_.cast<dcmplx>().matrix();
-            rey_kz_tmp_ = (kz_*ilap2tmp_).matrix();
+            rey_TiLap2TkxbTky = (-kyctmp_*kxctmp_ )*ilap2tmp_.cast<dcmplx>().matrix();
+            rey_TdzTiLap2 = (kz_*ilap2tmp_).matrix();
             
             // uy*ux - steal Reynolds stress variable for this
-            bzux_m_uzbx_d_ = (rey_mkxky_tmp_.array()*Cin[i].block( 0, 0, NZ_, NZ_).diagonal().array()).real() + (rey_kz_tmp_.array()*Cin[i].block(NZ_, 0,NZ_, NZ_).diagonal().array()).real();
+            bzux_m_uzbx_d_ = (rey_TiLap2TkxbTky.array()*Cin[i].block( 0, 0, NZ_, NZ_).diagonal().array()).real() + (rey_TdzTiLap2.array()*Cin[i].block(NZ_, 0,NZ_, NZ_).diagonal().array()).real();
             AM_u += mult_fac*bzux_m_uzbx_d_.sum();
             // by*bx - steal Reynolds stress variable for this
-            bzux_m_uzbx_d_ = (rey_mkxky_tmp_.array()*Cin[i].block( 2*NZ_,2*NZ_, NZ_, NZ_).diagonal().array()).real() +   (rey_kz_tmp_.array()*Cin[i].block(3*NZ_, 2*NZ_,NZ_, NZ_).diagonal().array()).real();
+            bzux_m_uzbx_d_ = (rey_TiLap2TkxbTky.array()*Cin[i].block( 2*NZ_,2*NZ_, NZ_, NZ_).diagonal().array()).real() +   (rey_TdzTiLap2.array()*Cin[i].block(3*NZ_, 2*NZ_,NZ_, NZ_).diagonal().array()).real();
             AM_b += mult_fac*bzux_m_uzbx_d_.sum();
             //
             //////////////////////////////////////
@@ -803,19 +893,8 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
 
 
 
-
-
-
-
 //////////////////////////////////////////////////////
 //         PRIVATE FUNCTIONS FOR INITIALIZATION     //
-
-// fft of the identity matrix
-void MHD_BQlin::Set_fft_identity_(void) {
-    fft_identity_ = dcmplxMat::Identity(NZ_,NZ_);
-    fft_.back_2D_dim1(fft_identity_.data());
-    fft_identity_ /= NZ_;
-}
 
 // Create and store arrays of lap2 to save computation of ffts
 void MHD_BQlin::Define_Lap2_Arrays_(void){
@@ -829,12 +908,9 @@ void MHD_BQlin::Define_Lap2_Arrays_(void){
     // Assign data to arrays
     lap2_ = new doubVec[ number_of_ky ];
     ilap2_ = new doubVec[ number_of_ky ];
-    fft_ilap2_ = new dcmplxMat[ number_of_ky ];
-    fft_kzilap2_ = new dcmplxMat[ number_of_ky ];
-    fft_kz2ilap2_ = new dcmplxMat[ number_of_ky ];
-
+    
     for (int i=0; i<number_of_ky;  ++i){
-
+        
         // Form Laplacian
         kytmp_=ky_[i].imag();
         lap2tmp_ = -kytmp_*kytmp_ + kz2_;
@@ -851,20 +927,15 @@ void MHD_BQlin::Define_Lap2_Arrays_(void){
         lap2_[i] = lap2tmp_;
         ilap2_[i] = ilap2tmp_;
         
-        // TAKE FFTs
-        fft_ilap2_[i] = (ilap2tmp_/NZ_).cast<dcmplx>().matrix().asDiagonal();
-        fft_.back_2D_dim1(fft_ilap2_[i].data());// NZ factor is added in when vector
-        
-        fft_kzilap2_[i] = (kz_*(ilap2tmp_/NZ_).cast<dcmplx>()).matrix().asDiagonal();
-        fft_.back_2D_dim1(fft_kzilap2_[i].data());
-        
-        fft_kz2ilap2_[i] = (kz2_*ilap2tmp_/NZ_).cast<dcmplx>().matrix().asDiagonal();
-        fft_.back_2D_dim1(fft_kz2ilap2_[i].data());
-        
     }
-
+    
 }
 
 //////////////////////////////////////////////////////
+
+
+
+
+
 
 

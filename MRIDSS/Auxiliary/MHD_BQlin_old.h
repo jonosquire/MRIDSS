@@ -1,13 +1,13 @@
 //
-//  Model_AutoGen_template.h
+//  MHD_BQlin_old.h
 //  MRIDSS
 //
 //  Created by Jonathan Squire on 4/25/14.
 //  Copyright (c) 2014 J Squire. All rights reserved.
 //
 
-#ifndef __MRIDSS__Model_AutoGen_template__
-#define __MRIDSS__Model_AutoGen_template__
+#ifndef __MRIDSS__MHD_BQlin_old__
+#define __MRIDSS__MHD_BQlin_old__
 
 
 #include "Model.h"
@@ -25,10 +25,10 @@
 // Model class for S3T/CE2 shearing box MHD model
 // Basic Quasi-linear MHD
 // Derived from Model (model.h)
-class Model_AutoGen_template : public Model {
+class MHD_BQlin_old : public Model {
 public:
-    Model_AutoGen_template(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
-    ~Model_AutoGen_template();
+    MHD_BQlin_old(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
+    ~MHD_BQlin_old();
     
     // Model name - for comparison wiht input file as a check
     const std::string equations_name;
@@ -56,14 +56,14 @@ public:
     
     
     // Dealiasing
-    void dealias(dcmplxMat &inMat);
+    void dealias(dcmplx *arr); // 2-D version - TODO tidy up
     void dealias(dcmplxVec& vec); // 1-D version
-    void dealias(doubVec& vec); // 1-D version
+    void dealias(doubVec& vec);
     
     //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation
     void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin );
-
+    
 private:
     
     
@@ -93,22 +93,28 @@ private:
     // Pre-calculate ilap2 related quantities to save computation (mainly for fft matrices)
     int* ky_index_; // Stores index in ky for a given full nxy index
     doubVec* lap2_, *ilap2_; // Laplacian and inverse
-    // Create and store arrays of lap2
-    void Define_Lap2_Arrays_(void);
+    dcmplxMat* fft_ilap2_,*fft_kzilap2_,*fft_kz2ilap2_; // ifft of ilap2, kz*ilap2 and kz^2*ilap2
     
     // Sizes for driving and energy
     long totalN2_;
     double mult_noise_fac_; // Factor to multiply noise to get values consistent with previous numbers
-    double fft2Dfac_, fft1Dfac_, fftFac_Reynolds_;
-
     
     // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
     bool dont_drive_ky0_modes_Q_;
     
-   
+    // Reynolds stress - store both complex and double for fft and to pass less data around with MPI
+    // complex
+    dcmplxVec bzux_m_uzbx_c_; // bz*ux-uz*bx
+    dcmplxVec bzuy_m_uzby_c_; // bz*uy - uz*by
+    // double
+    doubVec bzux_m_uzbx_d_, bzux_m_uzbx_drec_; // bz*ux-uz*bx
+    doubVec bzuy_m_uzby_d_, bzuy_m_uzby_drec_; // bz*uy - uz*by
+    
+    double * reynolds_save_tmp_; // Saving the various contributions to mean-field dynamo
+
     
     ////////////////////////////////////////////////////
-    //    TEMPORARY VARIABLES - SAME ACROSS MODELS    //
+    //               TEMPORARY VARIABLES              //
     doubVec lapFtmp_, lap2tmp_; // Laplacians - nice to still have lap2
     doubVec ilapFtmp_, ilap2tmp_; // Inverse Laplacians
     
@@ -116,49 +122,39 @@ private:
     double kxtmp_,kytmp_;
     // Qkl temporary
     doubVec Qkl_tmp_;
+    // Operator matrices - put into submatrices rather than storing full matrix
+    // Some are zero and some are diagonal (eigen .asDiagonal)
+    dcmplxVecM Aop_v11_, Aop_v12_, Aop_v21_, Aop_v43_;
+    dcmplxMat Aop_m13_, Aop_m14_, Aop_m23_, Aop_m24_, Aop_m31_, Aop_m41_, Aop_m42_;
+    dcmplxMat Aop_block_tmp_;
+
+    // Ckl_in submatrices - reset after each column for memory
+    dcmplxMat C1_,C2_,C3_,C4_;
     
-    
-    // Real versions of MFs and derivatives
-    dcmplxVecM By_, dzBy_, dzdzBy_;
-    dcmplxVecM Bx_, dzBx_, dzdzBx_, dzdzdzBx_;
-    
+    // Real versions of B and derivatives
+    dcmplxVec rBy_tmp_;
+    dcmplxVec rDzBy_tmp_;
+    dcmplxVec rDzzBy_tmp_;
     // Reynolds stresses
     dcmplxMat reynolds_mat_tmp_; // Temporary matrix storage for fft
-    
-    // store both complex and double for fft and to pass less data around with MPI
-    dcmplxVec bzux_m_uzbx_c_; // bz*ux-uz*bx
-    dcmplxVec bzuy_m_uzby_c_; // bz*uy - uz*by
-    // double
-    doubVec bzux_m_uzbx_d_, bzuy_m_uzby_d_; // stresses themselves (double)
-    doubVec reynolds_stress_MPI_send_, reynolds_stress_MPI_receive_; // mpi buffers
-    
-    double * reynolds_save_tmp_; // Saving the various contributions to mean-field dynamo
-
-    // Automatically generated temporary variables for Reynolds stress- class definition
-    dcmplxVecM rey_TiLap2TkxbTky, rey_TdzTiLap2Tkxb, rey_TiLap2Tky, rey_TdzTiLap2;
+    dcmplxVecM rey_mkxky_tmp_,rey_kz_tmp_,rey_mkxkz_tmp_,rey_mky_tmp_; // Convenient to store vectors for converting between u, zeta etc. and u uy uz...
 
     //////////////////////////////////////////////////////
-    
-    
-    /////////////////////////////////////////////////
-    //  AUTO GENERATED VARIABLES
-    
-    // Automatically generated temporary variables - class definition
-    dcmplxVecM T2Tdz, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzP2TkxbPLUSTkxbP3, TdzTiLap2Tkxb, TdzTiLap2TkxbP3PLUSTdzTkxb, TdzTqPLUSTm2Tdz, TiLap2TkxbP2Tky, TiLap2Tky, TkxbPLUSTm2TdzP2TiLap2Tkxb, Tm2TdzTiLap2Tky, TmdzTiLap2Tkxb, TmdzTq, TmiLap2TkxbP2Tky, TmiLap2Tky;
-    
-    dcmplx Tkxb, TkxbTkyP2, Tky, Tm2TkxbTkyTq, Tmkxb, Tmky;
-    
-    dcmplxMat Ctmp_1_, Ctmp_2_, Ctmp_3_, Ctmp_4_, Ctmp_5_, Ctmp_6_;
-    
-    dcmplxMat C11_, C12_, C13_, C14_, C21_, C22_, C23_, C24_, C31_, C32_, C33_, C34_, C41_, C42_, C43_, C44_;
 
+    //    BLOCK MATRIX MULTIPLICATION                   //
+    void Block_Matrix_Mult_(int column, dcmplxMat& Ckl_in_i,dcmplxMat& Ckl_out_i);
     
     
+    //////////////////////////////////////////////////////
+    //         PRIVATE FUNCTIONS FOR INITIALIZATION     //
     
-    /////////////////////////////////////////////////
-
+    // Create and store arrays of lap2 to save computation of ffts
+    void Define_Lap2_Arrays_(void);
+    // fft of the identity matrix
+    void Set_fft_identity_(void);
+    
 };
 
 
 
-#endif /* defined(__MRIDSS_AutoGen_template__) */
+#endif /* defined(__TwoDFluid__MHD_BQlin_old_old__) */
