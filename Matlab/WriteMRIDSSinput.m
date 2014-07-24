@@ -8,15 +8,15 @@ function WriteMRIDSSinput
 rmdot = @(str) strrep(str,'.','');
 
 MRIdir='../MRIDSS/';% Base directory
-for By = 0.02:0.02:0.2
-for Pm = [4];
-    Rm=8000;noise=3;
-    filename = ['LinearBScans_B' rmdot(num2str(By))  '_Noise' rmdot(num2str(noise)) 'Rm' num2str(Rm) 'Pm' num2str(Pm)]; % file name
+
+for Pm = [ 8];
+    Rm=4000;noise=8;
+    filename = ['FullQl_Noise' rmdot(num2str(noise)) 'Rm' num2str(Rm) 'Pm' num2str(Pm)]; % file name
     % Simulation type
-    equation_type = 'MHD_BQlin';
+    equation_type = 'MHD_FullUBQlin';
     % Parameters, comment out some of these fordifferent parameter scans
     L=[1,pi,1];
-    N=[40  64 64 ];
+    N=[32  32 48 ];
     % Physical parameters
     q=1.5;
 
@@ -25,21 +25,21 @@ for Pm = [4];
     eta = 1/Rm; % resistivity
     f_noise = noise; % Driving noise
     % Time steps
-    dt = 0.1*pi/3; % Timestep
-    time_interval = [0 50]; % Time interval
-    tv_save = dt; % Save energy, momentum, MFs etc. every tv_save
+    dt = 0.1; % Timestep
+    time_interval = [0 600]; % Time interval
+    tv_save = 2*dt; % Save energy, momentum, MFs etc. every tv_save
     full_save = time_interval(2)+1;
     % Flags for saving
     save_enQ=1; save_amQ=1; save_dissQ=0;
     save_ReyQ = 1; %Reynolds stress
     save_mfQ=1; % Mean-fields
     % Initial conditions
-    init_By = By;
+    init_By = 0.02;
     % Simulation flags
     remapQ =1; % Remapping
-    QuasiLinearQ = 0; % Reynolds stress feedback
+    QuasiLinearQ = 1; % Reynolds stress feedback
     
-    StartFromSavedQ=0;
+    StartFromSavedQ=1;
 
 
 
@@ -65,7 +65,7 @@ for Pm = [4];
     fprintf(fid,'Format: variable_ = var (can have arbitrary number of spaces around = )\n\n', 'char');
     
     fprintf(fid,'// Simulation type - used as a check\n','char');
-    fprintf(fid,['equations_to_use_ = ' equation_type ' \n' ,'char');
+    fprintf(fid,['equations_to_use_ = ' equation_type ' \n' ],'char');
     
     % Printing variables
     fprintf(fid, '// Box parameters\n','char');
@@ -120,7 +120,7 @@ for Pm = [4];
 end
 end
 
-end
+
 
 
 

@@ -85,17 +85,22 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Inputs SP, Model* equatio
     // Assign to mean fields
     doubVec zg = doubVec::LinSpaced( MF[0].size(), 0, 2*PI*(1.0-1.0/MF[0].size()) );
     
-    for (int i=0; i<numMF; ++i) {
-        MF[i].setZero();
-    }
+    
     // Decide what MF initial conditions based on SP.initial_By
     // If initial_By>0, only By nonzero, set to lowest kz mode in box
+    double mult_fac;
     if (SP.initial_By > 0.0) { // Lowest Kz mode in the box, amplitude from SP.initial_By
-        for (int i=0; i<MF[0].size(); ++i) {
-            MF[1](i) = (dcmplx) SP.initial_By*cos( zg(i) );
+        for (int i=0; i<numMF; ++i) {
+            if (i==1) { // Amplitude specified here, start By 10* larger than other(s)
+                mult_fac = SP.initial_By;
+            } else {
+                mult_fac = 0.1*SP.initial_By;
+            }
+            for (int k=0; k<MF[0].size(); ++k) {
+                MF[i](k) = (dcmplx) mult_fac*cos( zg(k) );
+            }
         }
     } else {// If initial_By<0, all MFs nonzero, random with specified amplitude
-        double mult_fac;
         for (int i=0; i<numMF; ++i) {
             
             if (i==1) { // Amplitude specified here, start By 10* larger than other(s)

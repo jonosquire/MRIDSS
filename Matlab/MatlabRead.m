@@ -6,14 +6,14 @@ n2s = @(str) strrep(num2str(str),'.','');
 base_dir='/Users/jsquire/Documents/MRIDSS/';
 data_dir = 'ClusterData/';
 data_dir = 'MRIDSS/Data/';
-noise =5;Rm=4000;Pm=4;By = 0.;
+Rm=4000;noise=8;Pm=8;
 run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
-run_dir  = 'HiRes_Rm8000Noise4Pm4/';
+run_dir = ['FullQl_Noise' num2str(noise) 'Rm' num2str(Rm) 'Pm' num2str(Pm) '/'];
 % run_dir = ['CheckNoise' n2s(noise) '_Rm' n2s(Rm) 'Pm' n2s(Pm) '/'];
-run_dir = 'SW_test/';
+% run_dir = 'SW_test/';
 
-MFdim=32; % Dimension in the mean fields
-numMF = 2; % number of mean fields
+MFdim=48; % Dimension in the mean fields
+numMF = 4; % number of mean fields
 num_Energy_AM = 4;
 num_reynolds = 5;
 

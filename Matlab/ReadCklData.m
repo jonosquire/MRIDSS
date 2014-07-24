@@ -7,7 +7,7 @@ n2s = @(str) strrep(num2str(str),'.','');
 processed_data_Q=0;
 ckl_format = 'float';
 base_dir='/Users/jsquire/Documents/MRIDSS/';
-data_dir = 'MRIDSS/Data/LinearBScan/';
+data_dir = 'MRIDSS/Data/';
 % data_dir = 'ClusterData/RmScan/';
 final_state_dir = 'FINAL_STATE/';
 
@@ -17,15 +17,15 @@ turbulent_res = [];
 % for By = [0.05:0.01:0.2]
     By = 0.16;
 noise =3;Rm=8000;Pm=4;
-run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
+% run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
 % run_dir = ['CheckNoise' n2s(noise) '_Rm' n2s(Rm) 'Pm' n2s(Pm) '/'];
-% run_dir = 'Noise1_Rm5000Pm8/';
+run_dir = 'SW_test/';
 
 
 
 if ~processed_data_Q
 % Some less often changed quantities
-    numMFs = 2;
+    numMFs = 4;
     numFluct = 4;
 
     P = ReadInputFile([base_dir data_dir run_dir]);

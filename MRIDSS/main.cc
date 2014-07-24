@@ -45,7 +45,7 @@ int main(int argc, char ** argv)
 
     // Construct "model" object
     fftwPlans fft;
-    Model* fluidEqs = new MHD_BQlin(SP, mpi, fft);
+    Model* fluidEqs = new MHD_FullUBQlin(SP, mpi, fft);
     const int num_MFs = fluidEqs->num_MFs();
     
     // Initialize solution

@@ -42,7 +42,7 @@
     #include <mpi.h>
 #endif
 #include <fftw3.h>
-//#define EIGEN_NO_DEBUG  // Define to turn off eigen range checking
+#define EIGEN_NO_DEBUG  // Define to turn off eigen range checking
 #include "../Eigen/Dense"
 #include "../External_headers/tinydir.h"
 
