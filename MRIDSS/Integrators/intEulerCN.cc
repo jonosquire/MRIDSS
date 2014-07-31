@@ -65,6 +65,18 @@ EulerCN::~EulerCN() {
     
 }
 
+// Reinitialize linear operators
+void EulerCN::Reinitialize_linear_Ops(double t){
+    
+    model_.linearOPs_Init(t, linop_MF_, linop_Ckl_old_);
+    for (int i=0; i<num_MF_; i++){
+        linop_MF_NLCo_[i] = dt_/(1.0-dt_/2*linop_MF_[i]);
+        linop_MF_linCo_[i] = (1.0+dt_/2*linop_MF_[i])/(1.0-dt_/2*linop_MF_[i]);
+    }
+    
+}
+
+
 int EulerCN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
     
     model_.rhs(t, dt_, MF, Ckl, MF_new_, Ckl_new_,linop_Ckl_);

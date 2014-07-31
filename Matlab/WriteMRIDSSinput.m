@@ -9,14 +9,15 @@ rmdot = @(str) strrep(str,'.','');
 
 MRIdir='../MRIDSS/';% Base directory
 
-for Pm = [ 8];
-    Rm=4000;noise=8;
+for Pm = [ 2];
+for    Rm=[2000];
+    noise=20;
     filename = ['FullQl_Noise' rmdot(num2str(noise)) 'Rm' num2str(Rm) 'Pm' num2str(Pm)]; % file name
     % Simulation type
     equation_type = 'MHD_FullUBQlin';
     % Parameters, comment out some of these fordifferent parameter scans
     L=[1,pi,1];
-    N=[32  32 48 ];
+    N=[24 48 32 ];
     % Physical parameters
     q=1.5;
 
@@ -25,19 +26,19 @@ for Pm = [ 8];
     eta = 1/Rm; % resistivity
     f_noise = noise; % Driving noise
     % Time steps
-    dt = 0.1; % Timestep
-    time_interval = [0 600]; % Time interval
-    tv_save = 2*dt; % Save energy, momentum, MFs etc. every tv_save
+    dt = 0.2; % Timestep
+    time_interval = [0 300]; % Time interval
+    tv_save = dt; % Save energy, momentum, MFs etc. every tv_save
     full_save = time_interval(2)+1;
     % Flags for saving
-    save_enQ=1; save_amQ=1; save_dissQ=0;
+    save_enQ=1; save_amQ=1; save_dissQ=1;
     save_ReyQ = 1; %Reynolds stress
     save_mfQ=1; % Mean-fields
     % Initial conditions
-    init_By = 0.02;
+    init_By = -1e-5;
     % Simulation flags
     remapQ =1; % Remapping
-    QuasiLinearQ = 1; % Reynolds stress feedback
+    QuasiLinearQ = 0; % Reynolds stress feedback
     
     StartFromSavedQ=1;
 
@@ -116,7 +117,7 @@ for Pm = [ 8];
     disp(' ')
     disp(' ')
 
-
+end
 end
 end
 

@@ -10,7 +10,6 @@
 		A20239BB195B257A00275CD9 /* fftwPlans.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20239B9195B257A00275CD9 /* fftwPlans.cc */; };
 		A20239BE195B262400275CD9 /* TimeVariables.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20239BC195B262400275CD9 /* TimeVariables.cc */; };
 		A20A82B9193FE9BA00E2DF42 /* intRK2CN.cc in Sources */ = {isa = PBXBuildFile; fileRef = A20A82B7193FE9BA00E2DF42 /* intRK2CN.cc */; };
-		A250B13A1937307A00218230 /* Constant_Damping.cc in Sources */ = {isa = PBXBuildFile; fileRef = A250B1381937307A00218230 /* Constant_Damping.cc */; };
 		A254623A191A60B300920C0A /* Input_parameters.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2546238191A60B300920C0A /* Input_parameters.cc */; };
 		A2546240191AD01B00920C0A /* MPIdata.cc in Sources */ = {isa = PBXBuildFile; fileRef = A254623E191AD01B00920C0A /* MPIdata.cc */; };
 		A2ADBADE19169F860082125D /* intEulerCN.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2ADBADC19169F860082125D /* intEulerCN.cc */; };
@@ -44,8 +43,6 @@
 		A20239BD195B262400275CD9 /* TimeVariables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TimeVariables.h; sourceTree = "<group>"; };
 		A20A82B7193FE9BA00E2DF42 /* intRK2CN.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = intRK2CN.cc; sourceTree = "<group>"; };
 		A20A82B8193FE9BA00E2DF42 /* intRK2CN.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = intRK2CN.h; sourceTree = "<group>"; };
-		A250B1381937307A00218230 /* Constant_Damping.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Constant_Damping.cc; sourceTree = "<group>"; };
-		A250B1391937307A00218230 /* Constant_Damping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constant_Damping.h; sourceTree = "<group>"; };
 		A25462371919B5E900920C0A /* General_Definitions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = General_Definitions.h; sourceTree = "<group>"; };
 		A2546238191A60B300920C0A /* Input_parameters.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Input_parameters.cc; sourceTree = "<group>"; };
 		A2546239191A60B300920C0A /* Input_parameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Input_parameters.h; sourceTree = "<group>"; };
@@ -184,8 +181,6 @@
 				A2EDFCAD197EE3A10028A1A3 /* MHD_BQlin.cc */,
 				A2EDFCAE197EE3A10028A1A3 /* MHD_BQlin.h */,
 				A2BA0FB71912B15F00866A27 /* Model.h */,
-				A250B1381937307A00218230 /* Constant_Damping.cc */,
-				A250B1391937307A00218230 /* Constant_Damping.h */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -273,7 +268,6 @@
 				A254623A191A60B300920C0A /* Input_parameters.cc in Sources */,
 				A2EDFCAF197EE3A10028A1A3 /* MHD_BQlin.cc in Sources */,
 				A2BA0FC41912F44800866A27 /* Initialization_routines.cc in Sources */,
-				A250B13A1937307A00218230 /* Constant_Damping.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

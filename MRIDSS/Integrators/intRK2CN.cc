@@ -88,6 +88,22 @@ RK2CN::~RK2CN() {
     
 }
 
+// Reinitialize linear operators
+void RK2CN::Reinitialize_linear_Ops(double t){
+    linop_MF_ = new doubVec[num_MF_];
+    for (int i=0; i<num_MF_; i++){
+        linop_MF_[i]= doubVec(size_MF_);
+    }
+    model_.linearOPs_Init(t, linop_MF_, linop_Ckl_old_);
+    for (int i=0; i<num_MF_; i++){
+        linop_MF_NLCo_dt_[i] = dt_/(1.0-dt_/2*linop_MF_[i]);
+        linop_MF_linCo_dt_[i] = (1.0+dt_/2*linop_MF_[i])/(1.0-dt_/2*linop_MF_[i]);
+        linop_MF_NLCo_dto2_[i] = dt_/2/(1.0-dt_/4*linop_MF_[i]);
+        linop_MF_linCo_dto2_[i] = (1.0+dt_/4*linop_MF_[i])/(1.0-dt_/4*linop_MF_[i]);
+    }
+    delete[] linop_MF_;
+}
+
 int RK2CN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
     
     // Temporary pointer variables

@@ -385,6 +385,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
         ////////////////////////////////////////////////////////
         ///       AUTOMATICALLY GENERATED EQUATIONS         /////
         ///       see GenerateC++Equations.nb in MMA        /////
+        if (QL_YN_)
         {
             Ctmp_1_ = Tkxb*C31_;
             fft_.back_2DFull( Ctmp_1_ );
@@ -976,6 +977,15 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             dealias(Ctmp_10_);
             Ckl_out[i].block( 3*NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_10_;
         }
+        else // THIS ASSUMES QL_YN_=0 IMPLIES ZERO MEAN FIELD!!!
+        {
+            // Evolves C in zero mean field - much faster when possible!
+            Coperator_with_zero_mean_fields(1, C11_, C21_, C31_, Ckl_out[i]);
+            Coperator_with_zero_mean_fields(2, C12_, C22_, C32_, Ckl_out[i]);
+            Coperator_with_zero_mean_fields(3, C13_, C23_, C33_, Ckl_out[i]);
+            Coperator_with_zero_mean_fields(4, C14_, C24_, C34_, Ckl_out[i]);
+
+        }
         ///     AUTOMATICALLY GENERATED EQUATIONS - END       ///
         ////////////////////////////////////////////////////////
         
@@ -1118,11 +1128,11 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
         MFout[3] = (q_-2)*MFin[2] + uy_rey_stress_c_;
     } else { // Still calculate Reynolds stress in linear calculation
         // B update
-        MFout[1] = -q_*MFin[0];
+        MFout[1].setZero();
         MFout[0].setZero();
         // U update
-        MFout[2] = 2*MFin[3];
-        MFout[3] = (q_-2)*MFin[2];
+        MFout[2].setZero();
+        MFout[3].setZero();
         
     }
     
@@ -1166,7 +1176,6 @@ void MHD_FullUBQlin::linearOPs_Init(double t0, doubVec * linop_MF, doubVec * lin
 
 //////////////////////////////////////////////////////////
 ////                DEALIASING                      //////
-
 
 // Applies dealiasing to 2-D matrix of size NZ_ in z Fourier space
 void MHD_FullUBQlin::dealias(dcmplxMat &inMat) {
@@ -1222,11 +1231,15 @@ void MHD_FullUBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmp
     
     // Energy
     double energy_u=0, energy_b=0;
-    double energy_u_f=0, energy_b_f=0; // Receive buffer for MPI_Reduce
     // Angular momentum
     double AM_u = 0, AM_b = 0;
-    double AM_u_f=0, AM_b_f=0; // Receive buffer for MPI_Reduce
+    // Dissipation
+    double diss_u=0,diss_b=0;
+    
+    // MPI buffers - this method passes around some unecessary data but will be very minimal
+    const int num_to_mpi = 6;
 
+    
     int mult_fac;// Factor to account for only doing half fft sum.
     /////////////////////////////////////
     //   ALL OF THIS IS PARALLELIZED
@@ -1251,8 +1264,8 @@ void MHD_FullUBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmp
             //////////////////////////////////////
             //     ENERGY
             // Use Qkl_tmp_ for Mkl to save memory
-            lapFtmp_ = lapFtmp_*ilap2tmp_;
-            Qkl_tmp_ << lapFtmp_, -ilap2tmp_,lapFtmp_, -ilap2tmp_;
+            lap2tmp_ = lapFtmp_*ilap2tmp_; // lap2tmp_ just a convenient storage
+            Qkl_tmp_ << lap2tmp_, -ilap2tmp_,lap2tmp_, -ilap2tmp_;
             
             // Energy = trace(Mkl*Ckl), Mkl is diagonal
             Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
@@ -1280,32 +1293,46 @@ void MHD_FullUBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmp
             //
             //////////////////////////////////////
         }
+        if (tv.dissip_save_Q()){
+            //////////////////////////////////////
+            //     DISSIPATION
+            // Use Qkl_tmp_ for Mkl to save memory
+            // CHANGES ilap2tmp_ SO PUT LAST OUT OF DIAGNOSTICS!!
+            ilap2tmp_ *= lapFtmp_; // lap2tmp_ just a convenient storage
+            lap2tmp_ = -lapFtmp_*ilap2tmp_;
+            Qkl_tmp_ << nu_*lap2tmp_, nu_*ilap2tmp_,eta_*lap2tmp_, eta_*ilap2tmp_;
+            
+            // Energy = trace(Mkl*Ckl), Mkl is diagonal
+            Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
+            
+            int num_u_b = num_fluct_/2; // Keep it clear where numbers are coming from.
+            diss_u += Qkl_tmp_.head(NZ_*num_u_b).sum();
+            diss_b += Qkl_tmp_.tail(NZ_*num_u_b).sum();
+            //
+            //////////////////////////////////////
+        }
         
         
     }
-    if (tv.energy_save_Q()){
-        // Put the energy on processor 0
-        mpi_.SumReduce_doub(&energy_u,&energy_u_f,1);
-        mpi_.SumReduce_doub(&energy_b,&energy_b_f,1);
-    }
-    if (tv.AngMom_save_Q()){
-        // Put the angular momentum on processor 0
-        mpi_.SumReduce_doub(&AM_u,&AM_u_f,1);
-        mpi_.SumReduce_doub(&AM_b,&AM_b_f,1);
-    }
-//    energy_u_f = energy_u; energy_b_f = energy_b;   // If in-place version is desired
-//    mpi_.SumReduce_IP_doub(&energy_u_f,1);
-//    mpi_.SumReduce_IP_doub(&energy_b_f,1);
+    double mpi_send_buff[num_to_mpi] = {energy_u,energy_b,AM_u,AM_b,diss_u,diss_b};
+    double mpi_receive_buff[num_to_mpi];
+
+    // Put the everything on processor 0
+    mpi_.SumReduce_doub(mpi_send_buff,mpi_receive_buff,num_to_mpi);
+//    mpi_.SumReduce_IP_doub(&energy_u_f,1); // Is this working?
+
     
     // Currently, TimeVariables is set to save on root process, may want to generalize this at some point (SumReduce_doub is also)
     if (mpi_.my_n_v() == 0) {
         ////////////////////////////////////////////
         ///// All this is only on processor 0  /////
         double divfac=1.0/totalN2_;
-        energy_u_f = energy_u_f*divfac;
-        energy_b_f = energy_b_f*divfac;
-        AM_u_f = AM_u_f*divfac;
-        AM_b_f = AM_b_f*divfac;
+        energy_u = mpi_receive_buff[0]*divfac;
+        energy_b = mpi_receive_buff[1]*divfac;
+        AM_u = mpi_receive_buff[2]*divfac;
+        AM_b = mpi_receive_buff[3]*divfac;
+        diss_u = mpi_receive_buff[4]*divfac;
+        diss_b = mpi_receive_buff[5]*divfac;
         
         
         ///////////////////////////////////////
@@ -1313,13 +1340,17 @@ void MHD_FullUBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmp
         // Only need to calculate on one processor
         double energy_MU=0, energy_MB=0;
         double AM_MU =0, AM_MB=0;
+        double diss_MU =0, diss_MB =0;
         
         energy_MB = (MFin[0].abs2().sum() + MFin[1].abs2().sum())/(NZ_*NZ_);
         energy_MU = (MFin[2].abs2().sum() + MFin[3].abs2().sum())/(NZ_*NZ_);
 
         AM_MB = (MFin[0]*MFin[1].conjugate()).real().sum()/(NZ_*NZ_);
         AM_MU = (MFin[2]*MFin[3].conjugate()).real().sum()/(NZ_*NZ_);
-
+        
+        diss_MB = (-eta_/(NZ_*NZ_))*((MFin[0].abs2()*kz2_).sum() + (MFin[1].abs2()*kz2_).sum() );
+        diss_MU = (-nu_/(NZ_*NZ_))*((MFin[2].abs2()*kz2_).sum() + (MFin[3].abs2()*kz2_).sum());
+        
         ///////////////////////////////////////
         //////         OUTPUT            //////
         
@@ -1327,17 +1358,22 @@ void MHD_FullUBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmp
         double* en_point = tv.current_energy();
         en_point[0] = energy_MU/2;
         en_point[1] = energy_MB/2;
-        en_point[2] = energy_u_f/2;
-        en_point[3] = energy_b_f/2;
+        en_point[2] = energy_u/2;
+        en_point[3] = energy_b/2;
         
         // Angular momentum
         double* AM_point = tv.current_AM();
-        AM_point[0] = AM_MU/2;
-        AM_point[1] = AM_MB/2;
-        AM_point[2] = AM_u_f/2;
-        AM_point[3] = AM_b_f/2;
+        AM_point[0] = AM_MU;
+        AM_point[1] = AM_MB;
+        AM_point[2] = AM_u;
+        AM_point[3] = AM_b;
         
-        
+        // Energy
+        double* diss_point = tv.current_diss();
+        diss_point[0] = diss_MU;
+        diss_point[1] = diss_MB;
+        diss_point[2] = diss_u;
+        diss_point[3] = diss_b;
         
         if (tv.reynolds_save_Q()) {
             //////////////////////////////////////
@@ -1415,7 +1451,18 @@ void MHD_FullUBQlin::Define_Lap2_Arrays_(void){
 //////////////////////////////////////////////////////
 
 
+///////////////////////////////////////////////////////////
+//      OPERATOR WTIH B=0 -  FOR SPEED WHEN POSSIBLE     //
 
+// Evolves C in zero mean field - much faster when possible!
+void MHD_FullUBQlin::Coperator_with_zero_mean_fields(int row, dcmplxMat& C1i, dcmplxMat& C2i, dcmplxMat& C3i, dcmplxMat& Cklout){
+
+    Cklout.block( 0, (row-1)*NZ_, NZ_, NZ_) = ilapFtmp_.matrix().asDiagonal()*((T2Tdz/fft2Dfac_).asDiagonal()*C2i + (Tm2TkxbTkyTq/fft2Dfac_)*C1i);
+    Cklout.block( NZ_, (row-1)*NZ_, NZ_, NZ_) = (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C1i;
+    Cklout.block( 2*NZ_, (row-1)*NZ_, NZ_, NZ_).setZero();
+    Cklout.block( 3*NZ_, (row-1)*NZ_, NZ_, NZ_) = (TmdzTq/fft2Dfac_).asDiagonal()*C3i;
+    
+}
 
 
 

@@ -16,10 +16,10 @@ turbulent_res = [];
 
 % for By = [0.05:0.01:0.2]
     By = 0.16;
-noise =3;Rm=8000;Pm=4;
+Rm=4000;noise=8;Pm=4;
 % run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
-% run_dir = ['CheckNoise' n2s(noise) '_Rm' n2s(Rm) 'Pm' n2s(Pm) '/'];
-run_dir = 'SW_test/';
+run_dir = ['FullQl_Noise' num2str(noise) 'Rm' num2str(Rm) 'Pm' num2str(Pm) '/'];
+
 
 
 

@@ -93,12 +93,16 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Inputs SP, Model* equatio
         for (int i=0; i<numMF; ++i) {
             if (i==1) { // Amplitude specified here, start By 10* larger than other(s)
                 mult_fac = SP.initial_By;
+                for (int k=0; k<MF[0].size(); ++k) {
+                    MF[i](k) = (dcmplx) mult_fac*cos( 2*zg(k) );
+                }
             } else {
-                mult_fac = 0.1*SP.initial_By;
+                mult_fac = -0.1*SP.initial_By;
+                for (int k=0; k<MF[0].size(); ++k) {
+                    MF[i](k) = (dcmplx) mult_fac*cos( 2*zg(k) );
+                }
             }
-            for (int k=0; k<MF[0].size(); ++k) {
-                MF[i](k) = (dcmplx) mult_fac*cos( zg(k) );
-            }
+            
         }
     } else {// If initial_By<0, all MFs nonzero, random with specified amplitude
         for (int i=0; i<numMF; ++i) {
@@ -110,6 +114,7 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Inputs SP, Model* equatio
             }
             MF[i].real().setRandom();
             MF[i].imag().setZero();
+            MF[i] = MF[i]-MF[i].mean();
             MF[i] *= mult_fac;
         }
 
@@ -119,7 +124,6 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Inputs SP, Model* equatio
     for (int i=0; i<numMF; ++i) {
         fft.for_1D(MF[i].data());
     }
-
 
     
 }

@@ -12,7 +12,7 @@
 #include "Models/MHD_BQlin.h"
 #include "Models/MHD_fullBQlin.h"
 #include "Models/MHD_FullUBQlin.h"
-#include "Models/Constant_Damping.h"
+//#include "Models/Constant_Damping.h"
 // Integrators
 #include "Integrators/intEuler.h"
 #include "Integrators/intEulerCN.h"
@@ -67,6 +67,7 @@ int main(int argc, char ** argv)
     TimeVariables time_vars(SP, 4, fluidEqs->num_MFs(), 5, mpi.my_n_v());
     
     double t=SP.t_start ; // Initial time
+    bool QL_effects_are_on=0;
 
     // Set up integration scheme
     Integrator *integrator = new RK2CN(t, SP.dt, *fluidEqs);
@@ -105,7 +106,14 @@ int main(int argc, char ** argv)
         };
         
         t = t + SP.dt;
+        
+        if (t > 100.0 && !QL_effects_are_on) {
+            fluidEqs->set_QL_YN(1);
+            // Reinitialize integrator to recalculate MF linear operator
+            integrator->Reinitialize_linear_Ops(t);
 
+            QL_effects_are_on=1;
+        }
         
     }
 

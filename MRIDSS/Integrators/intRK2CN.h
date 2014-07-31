@@ -10,7 +10,7 @@
 #define __MRIDSS__intRK2CN__
 
 #include "Integrator.h"
-#include "../Models/Model.h"
+
 
 class Model;
 
@@ -21,6 +21,8 @@ public:
     ~RK2CN();
     // Main step
     int Step(double t, dcmplxVec* MF, dcmplxMat * Ckl);
+    // Reinitialize linear operators
+    void Reinitialize_linear_Ops(double t);
 private:
     const int dim_Ckl_array_;   // dimension of Ckl array of matrices (Nx*Ny)
     const int size_Ckl_;  //size of individual matrices (4*Nz)

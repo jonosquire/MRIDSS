@@ -54,6 +54,8 @@ public:
     // Box dimensions
     double box_length(int index) const { return L_[index];};
     
+    // Quasi-linear state
+    void set_QL_YN(bool QL){QL_YN_ = QL;};
     
     // Dealiasing
     void dealias(dcmplxMat &inMat);
@@ -77,7 +79,7 @@ private:
     const double eta_;// viscosity & resistivity
     const double q_;
     const double f_noise_; // driving noise
-    const double QL_YN_; // Turn on quasi-linear feedback
+    bool QL_YN_; // Turn on quasi-linear feedback
     
     // MPI data
     MPIdata& mpi_; // Reference to MPI data
@@ -156,6 +158,13 @@ private:
     
     
     /////////////////////////////////////////////////
+    
+    
+    ////////////////////////////////////////////////////////////
+    //      OPERATOR WTIH B=0 -  FOR SPEED WHEN POSSIBLE     //
+    
+    // Evolves C in zero mean field - much faster when possible!
+    void Coperator_with_zero_mean_fields(int row, dcmplxMat& C1i, dcmplxMat& C2i, dcmplxMat& C3i, dcmplxMat& C4i, dcmplxMat& Cklout);
 
 };
 

@@ -65,6 +65,9 @@ public:
     friend void ShearingBox_Remap(Model* model,dcmplxMat* Ckl);
     friend void ShearingBox_Continuous_Remap(double qt, Model* mod, dcmplxMat* Ckl);
 
+    // Quasi-linear state
+    virtual void set_QL_YN(bool QL) = 0;
+    
 
     //////////////////////////////////////////////////////////////////
     //////  AUXILIARY FUNCTIONS OPERATING ON SOLUTION   //////////////

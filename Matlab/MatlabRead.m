@@ -6,26 +6,27 @@ n2s = @(str) strrep(num2str(str),'.','');
 base_dir='/Users/jsquire/Documents/MRIDSS/';
 data_dir = 'ClusterData/';
 data_dir = 'MRIDSS/Data/';
-Rm=4000;noise=8;Pm=8;
-run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
+Rm=2000;noise=20;Pm=2;
+% run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
 run_dir = ['FullQl_Noise' num2str(noise) 'Rm' num2str(Rm) 'Pm' num2str(Pm) '/'];
 % run_dir = ['CheckNoise' n2s(noise) '_Rm' n2s(Rm) 'Pm' n2s(Pm) '/'];
 % run_dir = 'SW_test/';
 
-MFdim=48; % Dimension in the mean fields
+MFdim=32; % Dimension in the mean fields
 numMF = 4; % number of mean fields
 num_Energy_AM = 4;
 num_reynolds = 5;
 
 fid_en =  fopen([base_dir data_dir run_dir 'energy.dat']);
 fid_AM =  fopen([base_dir data_dir run_dir 'angular_momentum.dat']);
+fid_diss =  fopen([base_dir data_dir run_dir 'dissipation.dat']);
 fid_rey =  fopen([base_dir data_dir run_dir 'reynolds_stress.dat']);
 fid_MF =  fopen([base_dir data_dir run_dir 'mean_fields.dat']);
 fid_time = fopen([base_dir data_dir run_dir 'time_vec.dat']);
 
 % Read time vector and simulation length
 time = fread(fid_time, inf ,'double');
-% time=time(1:512);
+%   time=time(1:1500);
 sim_len= length(time);
 
 figure
@@ -38,22 +39,38 @@ legend('Total','Mean U','Mean B','Fluct u','Fluct b')
 
 % Angular momentum
 AM = fread(fid_AM,[num_Energy_AM,sim_len],'double');
-subplot(313);
-plot(time,AM(1,:)+AM(3,:)-AM(2,:)-AM(4,:),'k',time, AM,'--' );
-title('AM stress');
-legend('Total','Mean U','Mean B','Fluct u','Fluct b')
+tAM=AM(1,:)+AM(3,:)-AM(2,:)-AM(4,:);
+% subplot(312);
+% plot(time,tAM,'k',time, AM,'--' );
+% title('AM stress');
+% legend('Total','Mean U','Mean B','Fluct u','Fluct b')
+% 
+% Dissipation
+diss = fread(fid_diss,[num_Energy_AM,sim_len],'double');
+% subplot(312);
+% plot(time,sum(diss),'k',time, diss,'--' );
+% title('Dissipation');
+% legend('Total','Mean U','Mean B','Fluct u','Fluct b')
 
-%Reynolds stress
-reynolds = fread(fid_rey,[num_reynolds,sim_len],'double');
-endp=length(time);
-plot(time(1:endp), reynolds(1:3,1:endp),time(1:endp),10*reynolds(4:5,1:endp),'LineWidth',1);
-title('Terms in the dynamo equation');
-legend('Shear term','B_y emf','B_y dissipation','10*B_x emf','10*B_x dissipation')
-% plot(time(1:endp), reynolds(1,1:endp),time(1:endp), -50*reynolds(2,1:endp))
+subplot(313);
+
+dt=time(2)-time(1);
+disscheck = [-sum(energy);1.5*dt*cumsum(tAM);-dt*cumsum(sum(diss))];
+disscheck = [-gradient(sum(energy),dt);1.5*tAM;-sum(diss)];
+
+plot(time,sum(disscheck),'k',time,disscheck)
+
+% %Reynolds stress
+% reynolds = fread(fid_rey,[num_reynolds,sim_len],'double');
+% endp=length(time);
+% plot(time(1:endp), reynolds(1:3,1:endp),time(1:endp),2*reynolds(4:5,1:endp),'LineWidth',1);
+% title('Terms in the dynamo equation');
+% legend('Shear term','B_y emf','B_y dissipation','10*B_x emf','10*B_x dissipation')
+% % plot(time(1:endp), reynolds(1,1:endp),time(1:endp), -50*reynolds(2,1:endp))
 
 % Mean fields;
-tmp = fread(fid_MF , inf ,'double');
-% tmp = fread(fid_MF , MFdim*numMF*sim_len ,'double');
+% tmp = fread(fid_MF , inf ,'double');
+tmp = fread(fid_MF , MFdim*numMF*sim_len ,'double');
 if length(tmp)~=MFdim*numMF*sim_len
     error('Number of NF elements does not match up');
 end
@@ -61,21 +78,24 @@ tmp = reshape(tmp,[MFdim*numMF,sim_len]);
 for ii=0:numMF-1
     MF{ii+1} = tmp(ii*MFdim+1:(ii+1)*MFdim,:);
     MFmax{ii+1} = max(abs(MF{ii+1}));
+    MFmean{ii+1} = sqrt(sum(abs(MF{ii+1}).^2)/MFdim);
 end
 subplot(311);
 htime = floor(length(time));
-% plot(time(1:htime), log10(MFmax{2}(1:htime)),time(1:htime), log10(MFmax{1}(1:htime)))
-plot( linspace(0,2*pi,MFdim), MF{2}(:,end),linspace(0,2*pi,MFdim), MF{1}(:,end) )
+plot(time(1:htime), log10(MFmean{2}(1:htime)),time(1:htime), log10(MFmean{1}(1:htime)),...
+    time(1:htime), log10(MFmean{3}(1:htime)),time(1:htime), log10(MFmean{4}(1:htime)))
+% plot( linspace(0,2*pi,MFdim), MF{2}(:,end),linspace(0,2*pi,MFdim), MF{1}(:,end) )
 contourf(time(1:htime), linspace(0,2*pi,MFdim),MF{2}(:,1:htime),20,'Linestyle','none')
 colorbar;
-title(['Pm = ' num2str(Pm) ' Rm = 8000' num2str(By)])
-% for kk=1:130
+% title(['Pm = ' num2str(Pm) ' Rm = 8000' num2str(By)])
+% for kk=300:10000
 %     plot( linspace(0,2*pi,MFdim), MF{2}(:,kk),linspace(0,2*pi,MFdim), MF{1}(:,kk) )
 %     title(['t = ' num2str(time(kk))])
-%     ylim([-0.15 0.15])
+% %     ylim([-1e-5,1e-5])
 %     drawnow
 %     pause(0.02)
 % end
+
 
 fclose(fid_en);
 fclose(fid_AM);

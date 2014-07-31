@@ -48,6 +48,15 @@ Euler::~Euler() {
 
 }
 
+// Reinitialize linear operators
+void Euler::Reinitialize_linear_Ops(double t){
+    
+    for (int i=0; i<num_MF_; i++) // MPI -- Split
+        linop_MF_[i]= doubVec(size_MF_);//Diagonal since diffusion
+    model_.linearOPs_Init(t,linop_MF_,linop_Ckl_);
+}
+
+
 int Euler::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
     
     model_.rhs(t, 0, MF, Ckl, MF_new_, Ckl_new_,linop_Ckl_);

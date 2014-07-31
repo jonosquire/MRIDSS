@@ -806,7 +806,8 @@ void MHD_fullBQlin::rhs(double t, double dt_lin,
         MFout[1] = -q_*MFin[0] + bzuy_m_uzby_c_;
         MFout[0] = bzux_m_uzbx_c_;
     } else { // Still calculate Reynolds stress in linear calculation
-        MFout[1] = -q_*MFin[0];
+        // B update
+        MFout[1].setZero();
         MFout[0].setZero();
     }
     
@@ -904,11 +905,15 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
     
     // Energy
     double energy_u=0, energy_b=0;
-    double energy_u_f=0, energy_b_f=0; // Receive buffer for MPI_Reduce
     // Angular momentum
     double AM_u = 0, AM_b = 0;
-    double AM_u_f=0, AM_b_f=0; // Receive buffer for MPI_Reduce
-
+    // Dissipation
+    double diss_u=0,diss_b=0;
+    
+    // MPI buffers - this method passes around some unecessary data but will be very minimal
+    const int num_to_mpi = 6;
+    
+    
     int mult_fac;// Factor to account for only doing half fft sum.
     /////////////////////////////////////
     //   ALL OF THIS IS PARALLELIZED
@@ -928,13 +933,13 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
         mult_fac = 2;
         if (kytmp_== 0.0 )
             mult_fac = 1; // Only count ky=0 mode once
-
+        
         if (tv.energy_save_Q()){
             //////////////////////////////////////
             //     ENERGY
             // Use Qkl_tmp_ for Mkl to save memory
-            lapFtmp_ = lapFtmp_*ilap2tmp_;
-            Qkl_tmp_ << lapFtmp_, -ilap2tmp_,lapFtmp_, -ilap2tmp_;
+            lap2tmp_ = lapFtmp_*ilap2tmp_; // lap2tmp_ just a convenient storage
+            Qkl_tmp_ << lap2tmp_, -ilap2tmp_,lap2tmp_, -ilap2tmp_;
             
             // Energy = trace(Mkl*Ckl), Mkl is diagonal
             Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
@@ -962,32 +967,46 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
             //
             //////////////////////////////////////
         }
+        if (tv.dissip_save_Q()){
+            //////////////////////////////////////
+            //     DISSIPATION
+            // Use Qkl_tmp_ for Mkl to save memory
+            // CHANGES ilap2tmp_ SO PUT LAST OUT OF DIAGNOSTICS!!
+            ilap2tmp_ *= lapFtmp_; // lap2tmp_ just a convenient storage
+            lap2tmp_ = -lapFtmp_*ilap2tmp_;
+            Qkl_tmp_ << nu_*lap2tmp_, nu_*ilap2tmp_,eta_*lap2tmp_, eta_*ilap2tmp_;
+            
+            // Energy = trace(Mkl*Ckl), Mkl is diagonal
+            Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
+            
+            int num_u_b = num_fluct_/2; // Keep it clear where numbers are coming from.
+            diss_u += Qkl_tmp_.head(NZ_*num_u_b).sum();
+            diss_b += Qkl_tmp_.tail(NZ_*num_u_b).sum();
+            //
+            //////////////////////////////////////
+        }
         
         
     }
-    if (tv.energy_save_Q()){
-        // Put the energy on processor 0
-        mpi_.SumReduce_doub(&energy_u,&energy_u_f,1);
-        mpi_.SumReduce_doub(&energy_b,&energy_b_f,1);
-    }
-    if (tv.AngMom_save_Q()){
-        // Put the angular momentum on processor 0
-        mpi_.SumReduce_doub(&AM_u,&AM_u_f,1);
-        mpi_.SumReduce_doub(&AM_b,&AM_b_f,1);
-    }
-//    energy_u_f = energy_u; energy_b_f = energy_b;   // If in-place version is desired
-//    mpi_.SumReduce_IP_doub(&energy_u_f,1);
-//    mpi_.SumReduce_IP_doub(&energy_b_f,1);
+    double mpi_send_buff[num_to_mpi] = {energy_u,energy_b,AM_u,AM_b,diss_u,diss_b};
+    double mpi_receive_buff[num_to_mpi];
+    
+    // Put the everything on processor 0
+    mpi_.SumReduce_doub(mpi_send_buff,mpi_receive_buff,num_to_mpi);
+    //    mpi_.SumReduce_IP_doub(&energy_u_f,1); // Is this working?
+    
     
     // Currently, TimeVariables is set to save on root process, may want to generalize this at some point (SumReduce_doub is also)
     if (mpi_.my_n_v() == 0) {
         ////////////////////////////////////////////
         ///// All this is only on processor 0  /////
         double divfac=1.0/totalN2_;
-        energy_u_f = energy_u_f*divfac;
-        energy_b_f = energy_b_f*divfac;
-        AM_u_f = AM_u_f*divfac;
-        AM_b_f = AM_b_f*divfac;
+        energy_u = mpi_receive_buff[0]*divfac;
+        energy_b = mpi_receive_buff[1]*divfac;
+        AM_u = mpi_receive_buff[2]*divfac;
+        AM_b = mpi_receive_buff[3]*divfac;
+        diss_u = mpi_receive_buff[4]*divfac;
+        diss_b = mpi_receive_buff[5]*divfac;
         
         
         ///////////////////////////////////////
@@ -995,9 +1014,13 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
         // Only need to calculate on one processor
         double energy_MU=0, energy_MB=0;
         double AM_MU =0, AM_MB=0;
+        double diss_MU =0, diss_MB =0;
         
         energy_MB = (MFin[0].abs2().sum() + MFin[1].abs2().sum())/(NZ_*NZ_);
+        
         AM_MB = (MFin[0]*MFin[1].conjugate()).real().sum()/(NZ_*NZ_);
+        
+        diss_MB = (-eta_/(NZ_*NZ_))*((MFin[0].abs2()*kz2_).sum() + (MFin[1].abs2()*kz2_).sum());
         
         ///////////////////////////////////////
         //////         OUTPUT            //////
@@ -1006,17 +1029,22 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
         double* en_point = tv.current_energy();
         en_point[0] = energy_MU/2;
         en_point[1] = energy_MB/2;
-        en_point[2] = energy_u_f/2;
-        en_point[3] = energy_b_f/2;
+        en_point[2] = energy_u/2;
+        en_point[3] = energy_b/2;
         
         // Angular momentum
         double* AM_point = tv.current_AM();
-        AM_point[0] = AM_MU/2;
-        AM_point[1] = AM_MB/2;
-        AM_point[2] = AM_u_f/2;
-        AM_point[3] = AM_b_f/2;
+        AM_point[0] = AM_MU;
+        AM_point[1] = AM_MB;
+        AM_point[2] = AM_u;
+        AM_point[3] = AM_b;
         
-        
+        // Energy
+        double* diss_point = tv.current_diss();
+        diss_point[0] = diss_MU;
+        diss_point[1] = diss_MB;
+        diss_point[2] = diss_u;
+        diss_point[3] = diss_b;
         
         if (tv.reynolds_save_Q()) {
             //////////////////////////////////////
@@ -1034,12 +1062,13 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
             rey_point[1] = (bzuy_m_uzby_c_*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
             rey_point[2] = -eta_ *sqrt((kz2_*MFin[1]).abs2().sum());
             rey_point[3] = (bzux_m_uzbx_c_*MFin[0].conjugate()).real().sum()/sqrt(MFin[0].abs2().sum());
-            rey_point[4] = -eta_ *sqrt((kz2_*MFin[0]).abs2().sum());//            rey_point[0] = real(bzuy_m_uzby_c_(1)*conj(MFin[1](1))) ;
-//            rey_point[1] = real(bzux_m_uzbx_c_(1)*conj(MFin[1](1))) ;
+            rey_point[4] = -eta_ *sqrt((kz2_*MFin[0]).abs2().sum());
+            //            rey_point[0] = real(bzuy_m_uzby_c_(1)*conj(MFin[1](1))) ;
+            //            rey_point[1] = real(bzux_m_uzbx_c_(1)*conj(MFin[1](1))) ;
             //
             //////////////////////////////////////
         }
-
+        
         ///// All this is only on processor 0  /////
         ////////////////////////////////////////////
     }
@@ -1048,6 +1077,8 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
     tv.Save_Data();
     
 }
+
+
 
 
 
