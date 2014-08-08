@@ -3,7 +3,7 @@ Input file for MRIDSS - Generated automatically by WriteMRIDSSinput.m
 Format: variable_ = var (can have arbitrary number of spaces around = )
 
 SIMULATION TYPE: 
-equations_to_use_ = MHD_BQlin
+equations_to_use_ = MHD_fullBQlin
 
 // Box parameters
 lx_ = 1.000000000000000, ly_ = 3.141592653589793, lz_ = 1.000000000000000

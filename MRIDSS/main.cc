@@ -54,7 +54,6 @@ int main(int argc, char *argv[])
     Model* fluidEqs;
     std::stringstream printstr;
     printstr << "Using model: " << SP.equations_to_use << std::endl;;;
-    mpi.print1(printstr.str());
     if (SP.equations_to_use == "MHD_BQlin") {
         fluidEqs = new MHD_BQlin(SP, mpi, fft);
     } else if (SP.equations_to_use == "MHD_fullBQlin") {
@@ -62,10 +61,12 @@ int main(int argc, char *argv[])
     } else if (SP.equations_to_use == "MHD_FullUBQlin") {
         fluidEqs = new MHD_FullUBQlin(SP, mpi, fft);
     } else {
-        fluidEqs = new MHD_BQlin(SP, mpi, fft); // Initialize to shut up compiler!
         std::cout << "ERROR: no matching model found!" << std::endl;
         ABORT;
+        fluidEqs = new MHD_BQlin(SP, mpi, fft); // Initialize to shut up compiler!
     }
+    mpi.print1(printstr.str());
+
     
     const int num_MFs = fluidEqs->num_MFs();
     
