@@ -67,7 +67,7 @@ int main(int argc, char ** argv)
     TimeVariables time_vars(SP, 4, fluidEqs->num_MFs(), 5, mpi.my_n_v());
     
     double t=SP.t_start ; // Initial time
-    bool QL_effects_are_on=0;
+    bool QL_effects_are_on=SP.QuasiLinearQ;
 
     // Set up integration scheme
     Integrator *integrator = new RK2CN(t, SP.dt, *fluidEqs);

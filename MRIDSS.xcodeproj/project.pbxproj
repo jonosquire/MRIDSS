@@ -50,7 +50,6 @@
 		A254623E191AD01B00920C0A /* MPIdata.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MPIdata.cc; sourceTree = "<group>"; };
 		A254623F191AD01B00920C0A /* MPIdata.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MPIdata.h; sourceTree = "<group>"; };
 		A2618DD0197EB8D9001EC9FD /* MMA_Generated_ReynoldsStresses.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_ReynoldsStresses.cpp; sourceTree = "<group>"; };
-		A2733C4E196E37EA00352DD6 /* SW_test.DSSinput */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SW_test.DSSinput; sourceTree = "<group>"; };
 		A27AE91A19803C220035E478 /* CopyFilesToCluster.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = CopyFilesToCluster.sh; sourceTree = "<group>"; };
 		A27AE91B19803C220035E478 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
 		A2A3A6E719756550000C1024 /* Model_AutoGen_template.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Model_AutoGen_template.cc; sourceTree = "<group>"; };
@@ -74,6 +73,7 @@
 		A2BA0FB71912B15F00866A27 /* Model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Model.h; sourceTree = "<group>"; };
 		A2BA0FC21912F44800866A27 /* Initialization_routines.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Initialization_routines.cc; sourceTree = "<group>"; };
 		A2BA0FC31912F44800866A27 /* Initialization_routines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Initialization_routines.h; sourceTree = "<group>"; };
+		A2E81A691992B88A00FE6B87 /* FullQl_NoiseScanRm4000Pm2.DSSinput */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = FullQl_NoiseScanRm4000Pm2.DSSinput; sourceTree = "<group>"; };
 		A2EDFCAB1978603B0028A1A3 /* MMA_Generated_Equations_fullBQlin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_Equations_fullBQlin.cpp; sourceTree = "<group>"; };
 		A2EDFCAD197EE3A10028A1A3 /* MHD_BQlin.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MHD_BQlin.cc; sourceTree = "<group>"; };
 		A2EDFCAE197EE3A10028A1A3 /* MHD_BQlin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MHD_BQlin.h; sourceTree = "<group>"; };
@@ -144,8 +144,8 @@
 		A2BA0F9F1912A96C00866A27 /* MRIDSS */ = {
 			isa = PBXGroup;
 			children = (
+				A2E81A691992B88A00FE6B87 /* FullQl_NoiseScanRm4000Pm2.DSSinput */,
 				A2BA0FA01912A96C00866A27 /* main.cc */,
-				A2733C4E196E37EA00352DD6 /* SW_test.DSSinput */,
 				A25462371919B5E900920C0A /* General_Definitions.h */,
 				A2BA0FBE1912F41B00866A27 /* Auxiliary */,
 				A2BA0FB41912B15F00866A27 /* Models */,
