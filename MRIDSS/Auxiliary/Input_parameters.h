@@ -21,7 +21,7 @@
 class Inputs {
 public:
     // Constructor
-    Inputs(const MPIdata& mpi);
+    Inputs(const MPIdata& mpi,const std::string& input_file_name);
     
 
     
@@ -102,7 +102,7 @@ public:
     template <class T>
     T Read_From_Input_File_(const std::string& varstr, const std::string& full_file, T default_value);
     // Find input file .DSSinput
-    std::string Find_Input_File(const std::string& directory);
+    std::string Find_Input_File(const std::string& directory,const std::string& input_name);
     
 private:
     int mpi_node_; // Mpi ode for internal usage

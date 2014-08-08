@@ -23,7 +23,7 @@
 #include "Auxiliary/TimeVariables.h"
 
 
-int main(int argc, char ** argv)
+int main(int argc, char *argv[])
 {
     MPIdata mpi; // Storage of MPI data
 #ifdef USE_MPI_FLAG
@@ -38,14 +38,35 @@ int main(int argc, char ** argv)
     /////////                INPUTS                     ////////////
     /////////                                           ////////////
     ////////////////////////////////////////////////////////////////
+    std::string input_file_name;
+    if (argc == 2) {
+         input_file_name = argv[1]; // If an argument is passed, this specifies input file
+    } else {
+       input_file_name = "null";
+    }
     
-    Inputs SP( mpi   );
+    Inputs SP( mpi , input_file_name);
     
     ////////////////////////////////////////////////////////////////
 
     // Construct "model" object
     fftwPlans fft;
-    Model* fluidEqs = new MHD_FullUBQlin(SP, mpi, fft);
+    Model* fluidEqs;
+    std::stringstream printstr;
+    printstr << "Using model: " << SP.equations_to_use << std::endl;;;
+    mpi.print1(printstr.str());
+    if (SP.equations_to_use == "MHD_BQlin") {
+        fluidEqs = new MHD_BQlin(SP, mpi, fft);
+    } else if (SP.equations_to_use == "MHD_fullBQlin") {
+        fluidEqs = new MHD_fullBQlin(SP, mpi, fft);
+    } else if (SP.equations_to_use == "MHD_FullUBQlin") {
+        fluidEqs = new MHD_FullUBQlin(SP, mpi, fft);
+    } else {
+        fluidEqs = new MHD_BQlin(SP, mpi, fft); // Initialize to shut up compiler!
+        std::cout << "ERROR: no matching model found!" << std::endl;
+        ABORT;
+    }
+    
     const int num_MFs = fluidEqs->num_MFs();
     
     // Initialize solution

@@ -11,11 +11,11 @@
 // Class for handling the input parameters and storing the data.
 // This should be a convenient way to input data and have the methods required to process this in a basic way
 
-Inputs::Inputs(const MPIdata& mpi): mpi_node_(mpi.my_n_v()) {
+Inputs::Inputs(const MPIdata& mpi, const std::string& input_file_name): mpi_node_(mpi.my_n_v()) {
     // Constructor for Inputs class (really a struct)
     
     // Find input file - this is a file in base directory with extension .DSSinput
-    std::string file_name = Find_Input_File(CURR_BASE_DIR);
+    std::string file_name = Find_Input_File(CURR_BASE_DIR, input_file_name);
     
     simulation_dir = DATA_DIR+file_name+"/";
     if (mpi_node_ == 0) {
@@ -185,12 +185,11 @@ T Inputs::Read_From_Input_File_(const std::string& varstr, const std::string& fu
 }
 
 // Find file in directory that has extensino .DSSinput
-std::string Inputs::Find_Input_File(const std::string& directory){
+std::string Inputs::Find_Input_File(const std::string& directory, const std::string& input_name){
     tinydir_dir dir;
     tinydir_open(&dir, directory.c_str());
     
-    std::string inputfile;// Input file name string
-    unsigned found_input = 0; // Flag for error checking
+    std::vector<std::string> inputfiles;// Input file name string
     while (dir.has_next)
     {
         tinydir_file file;
@@ -200,22 +199,43 @@ std::string Inputs::Find_Input_File(const std::string& directory){
         
         std::size_t in_ext_pos = filename.find("DSSinput");// Does it contain DSSinput?
         if (in_ext_pos != std::string::npos) {
-            // Found file
-            inputfile = filename.substr(0,in_ext_pos-1);
-            found_input+=1;
+            // Found file - store in vector
+            inputfiles.push_back( filename.substr(0,in_ext_pos-1) );
         }
         tinydir_next(&dir);
     }
     tinydir_close(&dir);
     
-    if (found_input ==1) {
-        return inputfile;
-    } else if (found_input > 1) {
-        if (mpi_node_ ==0) {
-            std::cout <<"Warning: Found multiple input files, using first: " << inputfile << ".DSSinput" << std::endl;
+    long matching_input = -1, num_input_files = inputfiles.size();
+    // Find which of these matches input_name
+    for (long i =0; i<num_input_files; ++i) {
+        if (inputfiles[i] == input_name)
+            matching_input = i;
+    }
+    
+    if (num_input_files>0) { // Found some input files
+        
+        if (matching_input >= 0) { // Return matching input
+            return inputfiles[matching_input];
+        } else if (input_name == "null" && num_input_files==1) { // Return one that was found
+            if (mpi_node_ ==0) {
+                std::cout <<"Using input file " << inputfiles[0] << ".DSSinput" << std::endl;
+            }
+            return inputfiles[0];
+        } else if (input_name == "null" && num_input_files>1) { // Return first one found
+            if (mpi_node_ ==0) {
+                std::cout <<"Warning: Found multiple input files and none specified in arguments, using first: " << inputfiles[0] << ".DSSinput" << std::endl;
+            }
+            return inputfiles[0];
+        } else { // Input specified but match not found -- abort
+            if (mpi_node_ ==0) {
+                std::cout << "Error: input file specified (" << input_name << ".DSSinput) but no match found in folder!!" << std::endl;
+            }
+            ABORT;
+            return 0;
         }
-        return inputfile;
-    } else {
+        
+    } else { // Found no input files
         if (mpi_node_ ==0) {
             std::cout <<"Error: Found no input file (extension .DSSinput)" << std::endl;
         }

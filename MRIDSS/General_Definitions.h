@@ -30,6 +30,7 @@
 #include <sstream>
 #include <iomanip>
 #include <complex>
+#include <vector>
 //#include <random>
 #include <ctime>
 #include <cmath>

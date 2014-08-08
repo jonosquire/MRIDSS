@@ -62,12 +62,16 @@
       </MacroExpansion>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-np 8"
+            argument = "-np 2"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "$(CONFIGURATION_BUILD_DIR)/MRIDSS"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "SW_tests"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>
