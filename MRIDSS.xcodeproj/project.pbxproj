@@ -43,8 +43,6 @@
 		A20239BD195B262400275CD9 /* TimeVariables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TimeVariables.h; sourceTree = "<group>"; };
 		A20A82B7193FE9BA00E2DF42 /* intRK2CN.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = intRK2CN.cc; sourceTree = "<group>"; };
 		A20A82B8193FE9BA00E2DF42 /* intRK2CN.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = intRK2CN.h; sourceTree = "<group>"; };
-		A237AD3A199545540071061D /* SW_test.DSSinput */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SW_test.DSSinput; sourceTree = "<group>"; };
-		A237AD3B1995585F0071061D /* WriteInputFile.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = WriteInputFile.py; sourceTree = "<group>"; };
 		A25462371919B5E900920C0A /* General_Definitions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = General_Definitions.h; sourceTree = "<group>"; };
 		A2546238191A60B300920C0A /* Input_parameters.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Input_parameters.cc; sourceTree = "<group>"; };
 		A2546239191A60B300920C0A /* Input_parameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Input_parameters.h; sourceTree = "<group>"; };
@@ -75,6 +73,8 @@
 		A2BA0FB71912B15F00866A27 /* Model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Model.h; sourceTree = "<group>"; };
 		A2BA0FC21912F44800866A27 /* Initialization_routines.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Initialization_routines.cc; sourceTree = "<group>"; };
 		A2BA0FC31912F44800866A27 /* Initialization_routines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Initialization_routines.h; sourceTree = "<group>"; };
+		A2D7C5561995A68700B3DF7E /* write_input_funcs.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = write_input_funcs.py; sourceTree = "<group>"; };
+		A2D7C5581995A68700B3DF7E /* WriteMRIDSSinput.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = WriteMRIDSSinput.py; sourceTree = "<group>"; };
 		A2EDFCAB1978603B0028A1A3 /* MMA_Generated_Equations_fullBQlin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_Equations_fullBQlin.cpp; sourceTree = "<group>"; };
 		A2EDFCAD197EE3A10028A1A3 /* MHD_BQlin.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MHD_BQlin.cc; sourceTree = "<group>"; };
 		A2EDFCAE197EE3A10028A1A3 /* MHD_BQlin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MHD_BQlin.h; sourceTree = "<group>"; };
@@ -129,6 +129,7 @@
 				A2A3A6EA19756565000C1024 /* Mathematica */,
 				A2A3A6ED19756565000C1024 /* Matlab */,
 				A254623D191AC6CC00920C0A /* MPIconfig.xcconfig */,
+				A2D7C5551995A68700B3DF7E /* Python */,
 				A2BA0F9F1912A96C00866A27 /* MRIDSS */,
 				A2BA0F9E1912A96C00866A27 /* Products */,
 			);
@@ -145,14 +146,12 @@
 		A2BA0F9F1912A96C00866A27 /* MRIDSS */ = {
 			isa = PBXGroup;
 			children = (
-				A237AD3A199545540071061D /* SW_test.DSSinput */,
 				A2BA0FA01912A96C00866A27 /* main.cc */,
 				A25462371919B5E900920C0A /* General_Definitions.h */,
 				A2BA0FBE1912F41B00866A27 /* Auxiliary */,
 				A2BA0FB41912B15F00866A27 /* Models */,
 				A2BA0FA91912B14900866A27 /* Integrators */,
 				A2BA0FA21912A96C00866A27 /* MRIDSS.1 */,
-				A237AD3B1995585F0071061D /* WriteInputFile.py */,
 			);
 			path = MRIDSS;
 			sourceTree = "<group>";
@@ -204,6 +203,15 @@
 				A254623F191AD01B00920C0A /* MPIdata.h */,
 			);
 			path = Auxiliary;
+			sourceTree = "<group>";
+		};
+		A2D7C5551995A68700B3DF7E /* Python */ = {
+			isa = PBXGroup;
+			children = (
+				A2D7C5561995A68700B3DF7E /* write_input_funcs.py */,
+				A2D7C5581995A68700B3DF7E /* WriteMRIDSSinput.py */,
+			);
+			path = Python;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
