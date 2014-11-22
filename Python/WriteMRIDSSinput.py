@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-import os,shutil,math
-from write_input_funcs import *
+import os,shutil,math,sys
+from WriteMRIDSS_Aux import *
 
 MRIdir='../MRIDSS/'
 
@@ -50,7 +50,7 @@ print '<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>'
 
 # Run mpiexec
 print ''
-os.system('mpiexec -np 8 ../mridss_prog '+ filename)
+#os.system('mpiexec -np 8 ../mridss_prog '+ filename)
 print 'Done case '+filename
 
 

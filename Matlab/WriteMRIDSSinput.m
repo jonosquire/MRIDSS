@@ -9,14 +9,20 @@ n2s = @(str) strrep(num2str(str),'.','');
 
 MRIdir='../MRIDSS/';% Base directory
 
+LxVec = [0.5 0.5 0.5 1 1 1 0.5 1 1 1];
+LyVec = [1 1 1 1 1 1 2 2 2 2];
+LzVec = [0.5 1 2 0.5 1 2 1 0.5 1 2];
+for kk = 1:length(LxVec)
     Rm=2000;Pm=2;
-    noise = 4;
-    filename = ['FullQl_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm)]; % file name
+    noise = 30;
+    Lx=LxVec(kk);Ly=LyVec(kk);Lz=LzVec(kk);
+    filename = ['BasicQL_Pm2L' n2s(Lx) n2s(Ly) n2s(Lz)]; % file name
     % Simulation type
-    equation_type = 'MHD_FullUBQlin';
+    equation_type = 'MHD_BQlin';
     % Parameters, comment out some of these fordifferent parameter scans
-    L=[1,pi,1];
-    N=[24 32 32 ];
+    
+    L=[Lx,Ly,Lz];
+    N=[32*Lx max([16*Ly,16]) 32*Lz ];
     % Physical parameters
     q=1.5;
 
@@ -25,19 +31,19 @@ MRIdir='../MRIDSS/';% Base directory
     eta = 1/Rm; % resistivity
     f_noise = noise; % Driving noise
     % Time steps
-    dt = 0.1; % Timestep
-    time_interval = [0 110]; % Time interval
-    tv_save = 5*dt; % Save energy, momentum, MFs etc. every tv_save
+    dt = 0.05; % Timestep
+    time_interval = [0 400]; % Time interval
+    tv_save = 10*dt; % Save energy, momentum, MFs etc. every tv_save
     full_save = time_interval(2)+1;
     % Flags for saving
     save_enQ=1; save_amQ=1; save_dissQ=1;
     save_ReyQ = 1; %Reynolds stress
     save_mfQ=1; % Mean-fields
     % Initial conditions
-    init_By = -1e-15;
+    init_By = -0.02;
     % Simulation flags
     remapQ =1; % Remapping
-    QuasiLinearQ = 0; % Reynolds stress feedback
+    QuasiLinearQ = 1; % Reynolds stress feedback
     
     StartFromSavedQ=0;
 
@@ -115,7 +121,7 @@ MRIdir='../MRIDSS/';% Base directory
     disp('<<<<<<<<<<<<<<>>>>>>>>>>>>>')
     disp(' ')
     disp(' ')
-
+end
 
 end
 

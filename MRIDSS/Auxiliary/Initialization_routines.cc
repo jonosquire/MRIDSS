@@ -94,12 +94,12 @@ void InitialConditions(dcmplxVec * MF, dcmplxMat* Ckl, Inputs SP, Model* equatio
             if (i==1) { // Amplitude specified here, start By 10* larger than other(s)
                 mult_fac = SP.initial_By;
                 for (int k=0; k<MF[0].size(); ++k) {
-                    MF[i](k) = (dcmplx) mult_fac*cos( 2*zg(k) );
+                    MF[i](k) = (dcmplx) mult_fac*cos( zg(k) );
                 }
             } else {
-                mult_fac = -0.1*SP.initial_By;
+                mult_fac = -0.0*SP.initial_By;
                 for (int k=0; k<MF[0].size(); ++k) {
-                    MF[i](k) = (dcmplx) mult_fac*cos( 2*zg(k) );
+                    MF[i](k) = (dcmplx) mult_fac*cos( zg(k) );
                 }
             }
             
@@ -158,7 +158,7 @@ void define_kxy_array(dcmplx* kx,dcmplx* ky, int* ky_index, int* Nxy, const doub
 
 // Define 1-D kz array
 void define_kz_array(dcmplxVec& kz, int NZ, const double* L) {
-    // kz is length NZ pointer array
+    // kz is length NZ eigen array
     for (int i=0; i<NZ/2; ++i)
         kz(i) = dcmplx(0,i*2*PI/L[2]);
     for (int i=NZ/2; i<NZ; ++i)

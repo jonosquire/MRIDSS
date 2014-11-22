@@ -67,7 +67,7 @@ fft_(fft) // FFT data
     fft1Dfac_ = 1.0/NZ_;
     
     // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
-    dont_drive_ky0_modes_Q_ = 0;
+    dont_drive_ky0_modes_Q_ = 1;
     
     ////////////////////////////////////////////////////
     // Useful arrays to save computation
@@ -103,7 +103,7 @@ fft_(fft) // FFT data
     //////////////////////////////////////////////////
 
 
-    // Real versions of B
+    // Real space versions of B
     By_ = dcmplxVecM::Zero(NZ_);
     dzBy_ = dcmplxVecM::Zero(NZ_);
     dzdzBy_ = dcmplxVecM::Zero(NZ_);
@@ -236,7 +236,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
             if (kytmp_==0.0) { // Don't drive the ky=kz=0 component (variables not invertible)
                 lapFtmp_(0)=0;
             }
-            
+
             Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
             Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
 
@@ -790,14 +790,16 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
             //     ENERGY
             // Use Qkl_tmp_ for Mkl to save memory
             lap2tmp_ = lapFtmp_*ilap2tmp_; // lap2tmp_ just a convenient storage
+
             Qkl_tmp_ << lap2tmp_, -ilap2tmp_,lap2tmp_, -ilap2tmp_;
             
             // Energy = trace(Mkl*Ckl), Mkl is diagonal
-            Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
+            Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].diagonal().real().array();
             
             int num_u_b = num_fluct_/2; // Keep it clear where numbers are coming from.
             energy_u += Qkl_tmp_.head(NZ_*num_u_b).sum();
             energy_b += Qkl_tmp_.tail(NZ_*num_u_b).sum();
+            
             //
             //////////////////////////////////////
         }

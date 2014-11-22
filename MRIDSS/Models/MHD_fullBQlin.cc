@@ -1049,24 +1049,52 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
         if (tv.reynolds_save_Q()) {
             //////////////////////////////////////
             //   Reynolds stress
-            // Saves quantities to do with the reynolds stress and dynamo
-            // 1) Shear contribution: Re( -q Bx By)/|By|
-            // 2) y emf: Re( bzuy_m_uzby_c_*By )/|By|
-            // 3) y dissipation: eta*k^2*By
-            // 4) x emf: Re( bzux_m_uzbx_c_*Bx )/|Bx|
-            // 5) x dissipation: eta*k^2*Bx
-            // Have assumed k0 to be lowest kz! i.e., driving largest dynamo possible in the box
-            // There may be slight errors here from saving using the updated values of MFin, presumably this is a small effect, especially at high resolution (low dt) and in steady state.
+//            // Saves quantities to do with the reynolds stress and dynamo
+//            // 1) Shear contribution: Re( -q Bx By)/|By|
+//            // 2) y emf: Re( bzuy_m_uzby_c_*By )/|By|
+//            // 3) y dissipation: eta*k^2*By
+//            // 4) x emf: Re( bzux_m_uzbx_c_*Bx )/|Bx|
+//            // 5) x dissipation: eta*k^2*Bx
+//            // Have assumed k0 to be lowest kz! i.e., driving largest dynamo possible in the box
+//            // There may be slight errors here from saving using the updated values of MFin, presumably this is a small effect, especially at high resolution (low dt) and in steady state.
+//            double* rey_point = tv.current_reynolds();
+//            rey_point[0] = -q_*(MFin[0]*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
+//            rey_point[1] = (bzuy_m_uzby_c_*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
+//            rey_point[2] = -eta_ *sqrt((kz2_*MFin[1]).abs2().sum());
+//            rey_point[3] = (bzux_m_uzbx_c_*MFin[0].conjugate()).real().sum()/sqrt(MFin[0].abs2().sum());
+//            rey_point[4] = -eta_ *sqrt((kz2_*MFin[0]).abs2().sum());
+//            //            rey_point[0] = real(bzuy_m_uzby_c_(1)*conj(MFin[1](1))) ;
+//            //            rey_point[1] = real(bzux_m_uzbx_c_(1)*conj(MFin[1](1))) ;
+//            //
+//            //////////////////////////////////////
+            
+            // Modified to save full (spatial) Reynolds stress - need to change in main.cc also
+            // Number of saves is MFdim*2, one for x one for y
+            // Previously defined bzux_m_uzbx_c_ = fftFac_Reynolds_*kz_*bzux_m_uzbx_c_;
+            // So, divide by kz to get Epsilon 
+            bzux_m_uzbx_c_ = bzux_m_uzbx_c_/(kz_*NZ_); bzux_m_uzbx_c_(0) = 0.0; // Avoid Nan
+            bzuy_m_uzby_c_ = bzuy_m_uzby_c_/(kz_*NZ_); bzuy_m_uzby_c_(0) = 0.0; // NZ_ is for IFT
+            // Take inverse transform
+            fft_.back_1D(bzux_m_uzbx_c_.data());
+            fft_.back_1D(bzuy_m_uzby_c_.data());
+            // Copy data to rey_point
             double* rey_point = tv.current_reynolds();
-            rey_point[0] = -q_*(MFin[0]*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
-            rey_point[1] = (bzuy_m_uzby_c_*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
-            rey_point[2] = -eta_ *sqrt((kz2_*MFin[1]).abs2().sum());
-            rey_point[3] = (bzux_m_uzbx_c_*MFin[0].conjugate()).real().sum()/sqrt(MFin[0].abs2().sum());
-            rey_point[4] = -eta_ *sqrt((kz2_*MFin[0]).abs2().sum());
-            //            rey_point[0] = real(bzuy_m_uzby_c_(1)*conj(MFin[1](1))) ;
-            //            rey_point[1] = real(bzux_m_uzbx_c_(1)*conj(MFin[1](1))) ;
-            //
-            //////////////////////////////////////
+            dcmplx *data_p = bzux_m_uzbx_c_.data();
+            int j=0,i=0;
+            while (i<MFdimz()) {
+                rey_point[j] = data_p[i].real();
+                ++i;++j;
+            }
+            data_p = bzuy_m_uzby_c_.data();
+            i=0;
+            while (i<MFdimz()) {
+                rey_point[j] = data_p[i].real();
+                ++i;++j;
+            }
+            
+            
+            
+            
         }
         
         ///// All this is only on processor 0  /////

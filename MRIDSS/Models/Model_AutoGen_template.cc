@@ -77,6 +77,13 @@ fft_(fft) // FFT data
     // Useful arrays to save computation
     Define_Lap2_Arrays_(); // Lap2- Allocates data to lap2_,ilap2_
     
+    
+    // Noise cutoff - compare to laplacian so squared
+    noise_range_[0] = sp.noise_range_low*sp.noise_range_low;
+    noise_range_[1] = sp.noise_range_high*sp.noise_range_high;
+    drive_condition_ = Eigen::Array<bool,Eigen::Dynamic,1>(NZ_);
+    print_noise_range_();
+    
     // Reynolds stresses
     bzux_m_uzbx_c_ = dcmplxVec::Zero(NZ_);
     bzuy_m_uzby_c_ = dcmplxVec::Zero(NZ_);
@@ -245,30 +252,32 @@ void Model_AutoGen_template::rhs(double t, double dt_lin,
         ilapFtmp_ = 1/lapFtmp_;
         ilap2tmp_ = ilap2_[ind_ky];;
         
+        drive_condition_ = lapFtmp_> -noise_range_[1] && lapFtmp_< -noise_range_[0];
+        
         ////////////////////////////////////////
         //              FORM Qkl              //
-        
-        bool Qkl_Zero_Q = kytmp_==0 && kxtmp_==0; // Whether Qkl  should be zero for this mode
-        if (dont_drive_ky0_modes_Q_ && kytmp_==0)
-            Qkl_Zero_Q = 1;  // Option in the code, set to zero for all ky=0 modes if set
-        
-        if (Qkl_Zero_Q) {
-            Qkl_tmp_.setZero(); // Don't drive the mean components! (really could leave mean cmpts out entirely)
-            ilapFtmp_(0) = 1; // Avoid infinities (lap2 already done, since stored)
-        }
-        else {
-            lapFtmp_ = lap2tmp_/lapFtmp_; // lapFtmp_ is no longer lapF!!!
-            dealias(lapFtmp_);
-            dealias(lap2tmp_);
-            // CANNOT USE AFTER THIS!
-            if (kytmp_==0.0) { // Don't drive the ky=kz=0 component (variables not invertible)
-                lapFtmp_(0)=0;
+        {
+            bool Qkl_Zero_Q = kytmp_==0 && kxtmp_==0; // Whether Qkl  should be zero for this mode
+            if (dont_drive_ky0_modes_Q_ && kytmp_==0)
+                Qkl_Zero_Q = 1;  // Option in the code, set to zero for all ky=0 modes if set
+            
+            if (Qkl_Zero_Q) {
+                Qkl_tmp_.setZero(); // Don't drive the mean components! (really could leave mean cmpts out entirely)
+                ilapFtmp_(0) = 1; // Avoid infinities (lap2 already done, since stored)
             }
-            
-            Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
-            Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
-
-            
+            else {
+                lapFtmp_ = drive_condition_.cast<double>()*lap2tmp_/lapFtmp_; // lapFtmp_ is no longer lapF!!!
+                lap2tmp_ *= drive_condition_.cast<double>();
+                dealias(lapFtmp_);
+                dealias(lap2tmp_);
+                // CANNOT USE AFTER THIS!
+                if (kytmp_==0.0) { // Don't drive the ky=kz=0 component (variables not invertible)
+                    lapFtmp_(0)=0;
+                }
+                
+                Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
+                Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
+            }
         }
         ////////////////////////////////////////
         
@@ -1136,6 +1145,35 @@ void Model_AutoGen_template::Define_Lap2_Arrays_(void){
     }
     
 }
+
+
+void Model_AutoGen_template::print_noise_range_(){
+    // Print out total number of driven modes
+    int tot_count = 0, driv_count = 0;
+    int tot_count_all = 0, driv_count_all = 0;// MPI reduced versions
+    for (int i=0; i<Cdimxy(); ++i) {
+        int k_i = i + index_for_k_array(); // k index
+        int ind_ky = ky_index_[k_i];
+        // Form Laplacians using time-dependent kx
+        kytmp_ = ky_[k_i].imag();
+        kxtmp_ = kx_[k_i].imag();
+        lap2tmp_ = lap2_[ind_ky];
+        lapFtmp_ = -kxtmp_*kxtmp_ + lap2tmp_;
+        dealias(lapFtmp_);
+        
+        drive_condition_ = lapFtmp_ != 0.0;
+        tot_count += drive_condition_.cast<int>().sum();;
+        drive_condition_ = lapFtmp_> -noise_range_[1] && lapFtmp_< -noise_range_[0];
+        driv_count += drive_condition_.cast<int>().sum();
+    }
+    mpi_.SumReduce_int(&tot_count, &tot_count_all, 1);
+    mpi_.SumReduce_int(&driv_count, &driv_count_all, 1);
+    std::stringstream noise_output;
+    noise_output << "Driving " << driv_count_all << " out of a total of " << tot_count_all << " modes (k = " << sqrt(noise_range_[0]) << " to " << sqrt(noise_range_[1]) << ")\n";
+    mpi_.print1(noise_output.str());
+    
+}
+
 
 //////////////////////////////////////////////////////
 

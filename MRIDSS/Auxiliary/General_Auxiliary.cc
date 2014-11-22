@@ -54,7 +54,8 @@ void ShearingBox_Continuous_Remap(double qt, Model* mod, dcmplxMat* Ckl){
         // This will become different on each processor even though each is storing the whole array. This is a little strange but probably inconsequential (aside from slight memory usage).
         k_i = i + mod->index_for_k_array(); // Index in kx_, ky_ for each process
         kxt = kxp[k_i].imag() + qt*kyp[k_i].imag();
-        if (kxt > nx/2*kxLfac) {
+        if (kxt > (nx/2.0-5)*kxLfac) {
+            //std::cout << "Remapped kx " << kxp[k_i].imag()+ qt*kyp[k_i].imag() << " ky " << kyp[k_i].imag() << std::endl;
             // Put kx back in correct range
             kxp[k_i] = kxp[k_i] - dcmplx(0,nx*kxLfac);
             // zero out Ckl

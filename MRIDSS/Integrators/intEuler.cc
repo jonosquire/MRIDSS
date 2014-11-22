@@ -35,8 +35,6 @@ dt_(dt),  model_(model)
         linop_MF_[i]= doubVec(size_MF_);//Diagonal since diffusion
     model_.linearOPs_Init(t0,linop_MF_,linop_Ckl_);
     
-
-    
     
 }
 

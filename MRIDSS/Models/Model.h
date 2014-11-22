@@ -72,6 +72,8 @@ public:
     //////////////////////////////////////////////////////////////////
     //////  AUXILIARY FUNCTIONS OPERATING ON SOLUTION   //////////////
     virtual void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin ) = 0;
+    // Number of Reynolds stress saves
+    virtual int num_Reynolds_saves() = 0;
     //////////////////////////////////////////////////////////////////
 
 protected:

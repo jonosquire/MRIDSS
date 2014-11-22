@@ -58,6 +58,7 @@ public:
     //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation
     void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin );
+    int num_Reynolds_saves(){return 2;};
     
 private:
     
@@ -75,19 +76,21 @@ private:
     
     // MPI data
     MPIdata& mpi_; // Reference to MPI data
+    fftwPlans& fft_;
+
     
     // Dealias setup
     int delaiasBnds_[2]; // Stores the bounds of the arrays for dealias
     
     // Useful arrays
-    int totalN_;
+    int totalN2_;
     double mult_noise_fac_; // Factor to multiply noise to get values consistent with previous numbers
     
     // Pre-calculate ilap2 related quantities to save computation (mainly for fft matrices)
     int* ky_index_; // Stores index in ky for a given full nxy index
     doubVec* lap2_, *ilap2_; // Laplacian and inverse
 
-    
+    void set_QL_YN(bool){mpi_.print1("DOES NOTHING!");};
     
     
     

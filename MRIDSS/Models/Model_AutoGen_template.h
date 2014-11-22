@@ -65,6 +65,7 @@ public:
     //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation
     void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin );
+    int num_Reynolds_saves(){return 5;}; //Change if Calc_Energy_AM_Diss is modified!
 
 private:
     
@@ -106,7 +107,10 @@ private:
     
     // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
     bool dont_drive_ky0_modes_Q_;
-    
+    // Noise properties
+    double noise_range_[2]; // High/low cutoff
+    Eigen::Array<bool,Eigen::Dynamic,1> drive_condition_; // Store driving in z as you loop  though x,y
+    void print_noise_range_();
    
     
     ////////////////////////////////////////////////////

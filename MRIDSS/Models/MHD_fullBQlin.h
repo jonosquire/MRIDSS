@@ -66,6 +66,7 @@ public:
     //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation
     void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin );
+    int num_Reynolds_saves(){return MFdimz()*num_MFs();}; //Change if Calc_Energy_AM_Diss is modified!
 
 private:
     

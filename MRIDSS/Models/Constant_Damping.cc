@@ -16,6 +16,12 @@
 // Derived from Model (model.h)
 
 
+//////////////////////////////////////////////////////
+//  WARNING WARNING
+//  CAREFUL USING CONSTANT DAMPING WITH A MULTISTEP INTEGRATOR
+//  Will give eroneous results due to the re-evaluation of the Laplacian at intermediate steps!
+
+
 // Constructor for Constant_Damping
 Constant_Damping::Constant_Damping(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) :
 equations_name("Constant_Damping"),
@@ -23,7 +29,8 @@ num_MF_(2), num_fluct_(4),
 q_(sp.q), f_noise_(sp.f_noise), nu_(sp.nu), eta_(sp.eta),
 QL_YN_(sp.QuasiLinearQ),
 Model(sp.NZ, sp.NXY , sp.L), // Dimensions - stored in base
-mpi_(mpi) // MPI data
+mpi_(mpi), // MPI data
+fft_(fft)
 {
     // Check that model is that specified in input file
     if (sp.equations_to_use != equations_name) {
@@ -52,6 +59,8 @@ mpi_(mpi) // MPI data
     // Setup MPI
     mpi_.Split_NXY_Grid( nxy_full_ ); // Work out MPI splitting
     
+    // Set fftw plans
+    fft_.calculatePlans( NZ_ );
     
     // Delalias setup
     delaiasBnds_[0] = NZ_/3+1; // Delete array including these elements
@@ -63,9 +72,11 @@ mpi_(mpi) // MPI data
     // ifft of identity and 1/lap2 etc.
     Define_Lap2_Arrays_(); // Lap2 and ffts - Allocates data to lap2_,ilap2_,fft_ilap2_,fft_kzilap2_,fft_kz2ilap2_
     
-    totalN_ = Nxy_[0]*Nxy_[1]*2*NZ_;
-
+    totalN2_ = Nxy_[0]*Nxy_[1]*2*NZ_;
+    totalN2_ = totalN2_*totalN2_;
+    
     mult_noise_fac_ = 1.0/(16*32*32); // Defined so that consistent with (16, 32, 32) results
+    mult_noise_fac_ = mult_noise_fac_*mult_noise_fac_;
     
     ////////////////////////////////////////////////////
     //                                                //
@@ -134,7 +145,7 @@ void Constant_Damping::rhs(double t, double dt_lin,
         lap2tmp_ = lap2_[ind_ky];
         lapFtmp_ = -kxtmp_*kxtmp_ + lap2tmp_;
         ilapFtmp_ = 1/lapFtmp_;
-        ilap2tmp_ = ilap2_[ind_ky];;
+        ilap2tmp_ = ilap2_[ind_ky];
         
         ////////////////////////////////////////
         //              FORM Qkl              //
@@ -167,7 +178,7 @@ void Constant_Damping::rhs(double t, double dt_lin,
 
             
             Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
-            Qkl_tmp_ = (f_noise_*f_noise_*totalN_*mult_noise_fac_)*Qkl_tmp_.abs();
+            Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
         }
         ////////////////////////////////////////
         
@@ -316,6 +327,7 @@ void Constant_Damping::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dc
             
             // Energy = trace(Mkl*Ckl), Mkl is diagonal
             Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
+            std::cout << Qkl_tmp_.transpose() <<std::endl;
             
             int num_u_b = num_fluct_/2; // Split into u and b parts
             energy_u += Qkl_tmp_.head(NZ_*num_u_b).sum();
@@ -323,6 +335,8 @@ void Constant_Damping::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dc
             //
             //////////////////////////////////////
         }
+        
+        
         
         
     }
@@ -343,8 +357,7 @@ void Constant_Damping::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dc
     if (mpi_.my_n_v() == 0) {
         ////////////////////////////////////////////
         ///// All this is only on processor 0  /////
-        double divfac=1.0/totalN_;
-        divfac = divfac*divfac;
+        double divfac=1.0/totalN2_;
         energy_u_f = energy_u_f*divfac;
         energy_b_f = energy_b_f*divfac;
         AM_u_f = AM_u_f*divfac;

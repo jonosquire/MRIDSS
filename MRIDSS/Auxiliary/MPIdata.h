@@ -46,6 +46,7 @@ public:
     // MPI reduce functions
     void SumReduce_doub(double* in_p, double* out_p, int size);// Sum double values
     void SumReduce_IP_doub(double* in_p, int size);// Sum double values
+    void SumReduce_int(int* in_p, int* out_p, int size);// Sum int values
     void SumAllReduce_IP_double(double* in_p, int size); //Sum double, in place
     void SumAllReduce_double(double* in_p, double*out_p, int size);//Sum double,
 private:

@@ -19,7 +19,9 @@ scp MRIDSS/General_Definitions.h portal:~/MRIDSS/MRIDSS/
 scp -r MRIDSS/Models portal:~/MRIDSS/MRIDSS/
 scp -r MRIDSS/Auxiliary portal:~/MRIDSS/MRIDSS/
 scp -r MRIDSS/Integrators portal:~/MRIDSS/MRIDSS/
-# Matlab routines
+
+# Matlab/python routines
+# scp -r Python portal:~/MRIDSS/
 # scp -r Matlab portal:~/MRIDSS/
 
 echo ""

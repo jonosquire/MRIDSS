@@ -3,11 +3,11 @@
 import os
 
 # Compiler flags, libraries etc.
-env = Environment(CXX = 'mpic++',CCFLAGS = '-Wall -O3')
+env = Environment(CXX = 'mpic++', CCFLAGS = '-Wall -O3 -ffast-math -march=native')
 print "CXX is:", env['CXX']
 env.Append(CPPPATH = ['/usr/local/include/'])
 env.Append(LIBPATH = ['/usr/local/lib/'])
-env.Append(LIBS = ['fftw3'])
+env.Append(LIBS = ['fftw3']) #'mpi_cxx','mpi',
 
 # Source files
 

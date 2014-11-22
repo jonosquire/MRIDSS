@@ -12,7 +12,7 @@
 #include "Models/MHD_BQlin.h"
 #include "Models/MHD_fullBQlin.h"
 #include "Models/MHD_FullUBQlin.h"
-//#include "Models/Constant_Damping.h"
+#include "Models/Constant_Damping.h"
 // Integrators
 #include "Integrators/intEuler.h"
 #include "Integrators/intEulerCN.h"
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     ////////////////////////////////////////////////////////////////
     std::string input_file_name;
     if (argc == 2) {
-         input_file_name = argv[1]; // If an argument is passed, this specifies input file
+        input_file_name = argv[1]; // If an argument is passed, this specifies input file
     } else {
        input_file_name = "null";
     }
@@ -60,6 +60,8 @@ int main(int argc, char *argv[])
         fluidEqs = new MHD_fullBQlin(SP, mpi, fft);
     } else if (SP.equations_to_use == "MHD_FullUBQlin") {
         fluidEqs = new MHD_FullUBQlin(SP, mpi, fft);
+    } else if (SP.equations_to_use == "Constant_Damping") {
+        fluidEqs = new Constant_Damping(SP, mpi, fft);
     } else {
         std::cout << "ERROR: no matching model found!" << std::endl;
         ABORT;
@@ -86,14 +88,13 @@ int main(int argc, char *argv[])
     }
 
     // Set up time variables -- energy, engular momentum etc.
-    TimeVariables time_vars(SP, 4, fluidEqs->num_MFs(), 5, mpi.my_n_v());
+    TimeVariables time_vars(SP, 4, fluidEqs->num_MFs(), fluidEqs->num_Reynolds_saves(), mpi.my_n_v());
     
     double t=SP.t_start ; // Initial time
     bool QL_effects_are_on=SP.QuasiLinearQ;
 
     // Set up integration scheme
-    Integrator *integrator = new RK2CN(t, SP.dt, *fluidEqs);
-    
+    Integrator *integrator = new EulerCN(t, SP.dt, *fluidEqs); 
     clock_t start = clock();
     double diff;
     
@@ -106,6 +107,7 @@ int main(int argc, char *argv[])
     // Main loop
     for (int i = SP.i_start+1; i < SP.nsteps+1; i++) {
         integrator->Step(t, MF, Ckl);
+        t = t + SP.dt;
         
         if (SP.remapQ) // Remap at every step now
             ShearingBox_Continuous_Remap(SP.q*t,fluidEqs, Ckl);
@@ -122,20 +124,16 @@ int main(int argc, char *argv[])
         }
         
         
-        // Full save of all data
-        if (i%SP.fullsol_save_nsteps ==0) {
-        //    std::cout << "Saving data, step " << i << std::endl;
-        };
         
-        t = t + SP.dt;
         
-        if (t > 100.0 && !QL_effects_are_on) {
-            fluidEqs->set_QL_YN(1);
-            // Reinitialize integrator to recalculate MF linear operator
-            integrator->Reinitialize_linear_Ops(t);
-
-            QL_effects_are_on=1;
-        }
+        
+//        if (t > 100.0 && !QL_effects_are_on) {
+//            fluidEqs->set_QL_YN(1);
+//            // Reinitialize integrator to recalculate MF linear operator
+//            integrator->Reinitialize_linear_Ops(t);
+//
+//            QL_effects_are_on=1;
+//        }
         
     }
 
@@ -150,6 +148,7 @@ int main(int argc, char *argv[])
         Save_Full_Data_for_Restart(fluidEqs,SP,mpi,t,MF,Ckl);
         mpi.print1("Saved Full Data to disk\n");
     }
+    
     
     delete[] MF;
     delete[] Ckl;
