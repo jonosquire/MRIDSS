@@ -8,24 +8,28 @@ processed_data_Q=0;
 ckl_format = 'float';
 base_dir='/Users/jsquire/Documents/MRIDSS/';
 data_dir = 'MRIDSS/Data/';
-% data_dir = 'ClusterData/RmScan/';
+% data_dir = 'Clus,terData/RmScan/';
 final_state_dir = 'FINAL_STATE/';
 
 turbulent_res = [];
 
+sp=0;
+store_full_rey = struct;
+store_total_rey = struct;
+for Pm = [1]
+    for Rm = [ 1]
+        storetmp = [];
+        for By=0.05
 
-% for By = [0.05:0.01:0.2]
-    By = 0.16;
-Rm=4000;noise=8;Pm=4;
-% run_dir = ['LinearBScans_B' n2s(By)  '_Noise' n2s(noise) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
-run_dir = ['FullQl_Noise' num2str(noise) 'Rm' num2str(Rm) 'Pm' num2str(Pm) '/'];
+% run_dir = ['LinearBA0521Scans_B' n2s(By) 'Rm' n2s(Rm) 'Pm' n2s(Pm) '/']; % file name
+        run_dir =  ['Linear' 'Bx' 'Scan_B' n2s(0.1) 'Rm' n2s(5000) 'Pm' n2s(1) '/']; % file name;
 
 
-
+% 
 
 if ~processed_data_Q
 % Some less often changed quantities
-    numMFs = 4;
+    numMFs = 2;
     numFluct = 4;
 
     P = ReadInputFile([base_dir data_dir run_dir]);
@@ -73,13 +77,18 @@ if ~processed_data_Q
 
         % Mean field - same on all 
         MF = fread(fid{ii},[2 numMFs*N(3)], 'double');
-        MF =make_complex(MF);
+        MF = make_complex(MF);
         MF = reshape(MF,[N(3) numMFs]).';
 
         % Ckl array 
         Ckl_cell{ii} = fread(fid{ii}, [2, nxy_pproc*(numFluct*N(3))^2],ckl_format);
         Ckl_cell{ii} = make_complex(Ckl_cell{ii});
-        Ckl_cell{ii} = reshape(Ckl_cell{ii}, [(numFluct*N(3))^2  nxy_pproc]);
+        try 
+          Ckl_cell{ii} = reshape(Ckl_cell{ii}, [(numFluct*N(3))^2  nxy_pproc]);
+        catch
+            Ckl_cell{ii} = zeros([(numFluct*N(3))^2  nxy_pproc]);
+            warning(['Did not work at Pm' n2s(Pm) 'Rm' n2s(Rm) 'By' n2s(By) '\n nz = ' n2s(N(3))])
+        end
 
         % Check there's no more data
         tmp = fread(fid{ii}, inf);
@@ -161,7 +170,7 @@ if ~processed_data_Q
     end
 
     % Energy
-    energy=solEnergy(P,K,Ckl);
+     [energy,energyfull]=solEnergy(P,K,Ckl);
     % Reynolds stress
     [bzuxmuzbx,bzuymuzby] = ReynoldsStresses(t,P,K,Ckl);
 
@@ -173,56 +182,62 @@ end
 
 
 
-kz1_Bx = reshape(real(bzuxmuzbx(2,:,:)),[P.nx-1,P.ny/2]);
-kz1_By = reshape(real(bzuymuzby(2,:,:)),[P.nx-1,P.ny/2]);
+kz1_Bx = reshape(real(K.KZ(2,:,:).*bzuxmuzbx(2,:,:)),[P.nx-1,P.ny/2]);
+kz1_By = reshape(real(K.KZ(2,:,:).*bzuymuzby(2,:,:)),[P.nx-1,P.ny/2]);
+
+% kyarr=repmat(imag(K.KY)',[P.nx-1,1]);
+% kz1_Bx(kyarr==0)=0;
+% kz1_By(kyarr==0)=0;
+% energy(kyarr==0)=0;
 
 
 figure
 cmap = colormap;cvec = 0:1/64:1-1/64;
-plotnum = P.ny/4;
+plotnum = P.ny/2;
 for kk=1:plotnum % Create legend for each ky
     legendstr{kk} = ['ky = ' num2str(imag(K.KY(kk)))];
     colorlist{kk} = interp1(cvec,cmap,(kk-1)/plotnum);
 end
-% legendstr{kk+1}='Total';
+legendstr{kk+1}='Total';
 
+sp=sp+1;
+totB = [sum(sum(kz1_Bx)) ;sum(sum(kz1_By));sum(sum(energy))];
 for yyy=1:plotnum
-    subplot(211)
+    subplot(3,1,sp)
     hold on
-    plot(imag(K.kx_array(:,yyy)),-kz1_Bx(:,yyy),'o-','Color',colorlist{yyy},'MarkerEdgeColor',colorlist{yyy},'MarkerFaceColor',colorlist{yyy});
-    title(['Pm = ' num2str(Pm) ' B_y = ' num2str(By) char(10) '  x reynolds stress'])
+    plot(imag(K.kx_array(:,yyy)),kz1_Bx(:,yyy),'o-','Color',colorlist{yyy},'MarkerEdgeColor',colorlist{yyy},'MarkerFaceColor',colorlist{yyy});
+    title(['Pm = ' num2str(Pm) ' B_y = ' num2str(By) '  x reynolds stress:  '  num2str(sum(sum(kz1_Bx)))])
     xlabel('k_x')
-    subplot(212)
+    subplot(312)
     hold on
     plot(imag(K.kx_array(:,yyy)),kz1_By(:,yyy),'o-','Color',colorlist{yyy},'MarkerEdgeColor',colorlist{yyy},'MarkerFaceColor',colorlist{yyy});
-    title(['y reynolds stress' char(10) num2str(sum(sum(kz1_By)))])
+    title(['y reynolds stress:  '  num2str(sum(sum(kz1_By)))])
+    xlabel('k_x')
+    subplot(313)
+    hold on
+    plot(imag(K.kx_array(:,yyy)),energy(:,yyy),'o-','Color',colorlist{yyy},'MarkerEdgeColor',colorlist{yyy},'MarkerFaceColor',colorlist{yyy});
+    title(['Energy'])
     xlabel('k_x')
 end
 legend(legendstr)
-% subplot(211)
-% plot(fftshift(imag(K.KX)),-fftshift(kz1_Bx,1),fftshift(imag(K.KX)),-sum(fftshift(kz1_Bx,1),2),'k')
-% title(['Pm = ' num2str(Pm) ' B_y = ' num2str(By) char(10) '  x reynolds stress'])
-% xlabel('k_x')
-% legend(legendstr);
-% subplot(212)
-% plot(fftshift(imag(K.KX)),fftshift(kz1_By,1),fftshift(imag(K.KX)),sum(fftshift(kz1_By,1),2),'k')
-% title(['y reynolds stress' char(10) num2str(sum(sum(fftshift(kz1_By))))])
-% xlabel('k_x')
-% turbulent_res = [turbulent_res [By;sum(sum(fftshift(kz1_Bx)));sum(sum(fftshift(kz1_By)))]];
+sum(sum(energy))
 
-% figure
-% [xg,yg,ckl_xy]=xyCorrelationFunction(t,P,K,Ckl);
-% contourf(xg,yg,ckl_xy,40,'LineColor','none')
+% storetmp = [storetmp totB];
+% store_full_rey.(['Pm' n2s(Pm) 'Rm' n2s(Rm) 'By' n2s(By)]).Bx = kz1_Bx;
+% store_full_rey.(['Pm' n2s(Pm) 'Rm' n2s(Rm) 'By' n2s(By)]).Bx = kz1_By;
+% store_full_rey.(['Pm' n2s(Pm) 'Rm' n2s(Rm) 'By' n2s(By)]).K = K;
+% disp(['Done: Pm' n2s(Pm) 'Rm' n2s(Rm) 'By' n2s(By)]);
 
+        end % By loop 
+        store_total_rey.(['Pm' n2s(Pm) 'Rm' n2s(Rm)]) = storetmp;
+    end % Rm loop 
+end % Pm loop
+% store_total_rey.By = 0.02:0.02:0.2;
+% 
+% R = store_total_rey;
+% save([base_dir data_dir 'FullData_wBxA0521'],'store_full_rey')
+% save([base_dir data_dir 'DataTotals_wBxA0521'],'R')
 
-% subplot(313)
-% plot(linspace(0,1,length(MF)),real(ifft(MF,[],2)))
-% plot(fftshift(imag(K.KX)),fftshift(energy,1))
-% xlabel('k_x')
-% legend('k_y = 0', ['k_y = ' num2str(imag(K.KY(2)))])
-% sum(sum(energy))
-
-% end
 
 end
 
@@ -314,10 +329,10 @@ for yyy=1:P.ny/2
             [zs zs -kxt*KZ.*ilap2 -ky*ilap2]};
         
         % Bx Reynolds stress
-        bzuxmuzbx(:,xxx,yyy)=(1/P.nx^2/P.ny^2)*K.KZ.*fft(mfac(yyy)*real(...
+        bzuxmuzbx(:,xxx,yyy)=(1/P.nx^2/P.ny^2).*fft(mfac(yyy)*real(...
             diag(ifft(ifft(  ubops{6}*ckl*(ubops{1}') - ubops{3}*ckl*(ubops{4}')  )')')));
         % By Reynolds stress
-        bzuymuzby(:,xxx,yyy)=(1/P.nx^2/P.ny^2)*K.KZ.*fft(mfac(yyy)*real(...
+        bzuymuzby(:,xxx,yyy)=(1/P.nx^2/P.ny^2).*fft(mfac(yyy)*real(...
             diag(ifft(ifft(  ubops{6}*ckl*(ubops{2}') - ubops{3}*ckl*(ubops{5}')  )')')));
         
         
@@ -327,13 +342,10 @@ end
 end
 
 
-function energy=solEnergy(P,K,Ckl)
+function [energy,energyfull]=solEnergy(P,K,Ckl)
 
-energy=zeros(P.nx,P.ny/2);
+energy=zeros(P.nx-1,P.ny/2);
 % Calcuates the energy of Ckl solution
-if sum(sum(abs(Ckl(:,:,1,1))))>1e-10
-    warning('Energy in kx=ky=0 fluctuation tensor')
-end
 
 mfac=[1;2*ones(P.ny/2-1,1)];
 
@@ -348,13 +360,23 @@ for yyy=1:P.ny/2
         if ky==0
             lap2(1)=1;% Shouldn't be energy in this mode anyway
         end
+        on = ones(size(lap2));on(1)=1;
 
-        Mkl=abs([lapF./lap2;1./lap2;lapF./lap2;1./lap2]);
+        Mkl=abs([on.*lapF./lap2;on.*1./lap2;0*lapF./lap2;0*1./lap2]);
+        
 %         if ts==0
 %         disp(['kx = ', num2str(K.kx(xxx)), 'ky = ', num2str(K.ky(yyy))])
 %         disp(num2str(mfac(yyy)*sum(Mkl.*diag(Ckl(:,:,xxx,yyy)))));
 %         end
+        energyfull(:,xxx,yyy)=Mkl.*diag(Ckl(:,:,xxx,yyy));
         energy(xxx,yyy)=mfac(yyy)*sum(Mkl.*diag(Ckl(:,:,xxx,yyy)));
+        
+        if kxt==0.0 && ky==0.0
+            if sum(sum(abs(Ckl(:,:,xxx,yyy))))>1e-10
+                warning('Energy in kx=ky=0 fluctuation tensor')
+            end
+        end
+
     end
 end
 energy=energy/(2*P.nx^2*P.ny^2*P.nz^2);

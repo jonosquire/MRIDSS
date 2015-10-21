@@ -408,7 +408,7 @@ void Constant_Damping::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dc
     }
     
     // Increase the number to save
-    tv.Save_Data();
+    tv.Save_Data(t);
     
 }
 

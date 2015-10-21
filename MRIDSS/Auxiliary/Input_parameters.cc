@@ -74,6 +74,7 @@ Inputs::Inputs(const MPIdata& mpi, const std::string& input_file_name): mpi_node
         
         // Time domain variables: dt, t_final, t_initial
         dt = Read_From_Input_File_<double>("dt_",fullfile,0.33333333333333);
+        CFL = Read_From_Input_File_<double>("CFL_",fullfile,1.0);
         t_final = Read_From_Input_File_<double>("t_final_",fullfile,10.0);
         t_initial = Read_From_Input_File_<double>("t_initial_",fullfile,0.0);
         // Saving: tv_save, full_save
@@ -88,10 +89,16 @@ Inputs::Inputs(const MPIdata& mpi, const std::string& input_file_name): mpi_node
         nu = Read_From_Input_File_<double>("nu_",fullfile,0.01);
         eta = Read_From_Input_File_<double>("eta_",fullfile,0.01);
         q = Read_From_Input_File_<double>("q_",fullfile, 1.5);
+        omega = Read_From_Input_File_<double>("omega_",fullfile, 2.0/3.0*q);
         // Noise
         f_noise = Read_From_Input_File_<double>("f_noise_",fullfile, 0);
         noise_range_low = Read_From_Input_File_<double>("noise_range_low_",fullfile, 0);
         noise_range_high = Read_From_Input_File_<double>("noise_range_high_",fullfile, 1e16);
+        v_noise_mult = Read_From_Input_File_<double>("v_noise_mult_",fullfile, 1.0);
+        b_noise_mult = Read_From_Input_File_<double>("b_noise_mult_",fullfile, 1.0);
+        
+        // Mean B fields
+        B0z = Read_From_Input_File_<double>("B0z_", fullfile, 0.0);
         
         // Boolean flags: remapQ, QuasiLinearQ
         remapQ = Read_From_Input_File_<bool>("Remap?", fullfile, 1);
@@ -135,8 +142,18 @@ void Inputs::initialize_() {
     nsteps = t_final/dt;
     t_start = t_initial;
     i_start = 0;
-    timevar_save_nsteps = round(timvar_save_interval/dt);
+ 
+    timevar_save_nsteps = round(timvar_save_interval/dt); // Not really used for variable dt
     fullsol_save_nsteps = round(fullsol_save_interval/dt);
+    // Stop it seg faulting if timevar dt < dt
+    if (timvar_save_interval < dt) {
+        timvar_save_interval = dt;
+    }
+
+    
+    fullsave_t = 0.0;
+    timevar_t = 0.0;
+
     
     // Shearing box - THIS ISN'T USED WITH NEW REMAP METHOD
     num_before_remap = 2*nsteps; // If no remap

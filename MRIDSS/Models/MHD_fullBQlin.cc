@@ -13,12 +13,23 @@
 //
 // Derived from Model (model.h)
 
+// This model is quite useful for more theoretical dynamo studies
+// since it is the more general than basic without having the U complication.
+// Thus, I've included numerous extra switches, e.g., turning off rotation.
+// These can mostly be set
+// before the main body of the constructor. 
+
 // Constructor for MHD_fullBQlin
 MHD_fullBQlin::MHD_fullBQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) :
 equations_name("MHD_fullBQlin"),
 num_MF_(2), num_fluct_(4),
-q_(sp.q), f_noise_(sp.f_noise), nu_(sp.nu), eta_(sp.eta),
+q_(sp.q), Omega_(sp.omega),
+f_noise_(sp.f_noise), nu_(sp.nu), eta_(sp.eta),
 QL_YN_(sp.QuasiLinearQ),
+dont_drive_ky0_modes_Q_(0), // turn off driving of ky=0, kx,kz != 0 modes
+drive_only_velocity_fluctuations_(0), // If True, only drive velocity field.
+drive_only_magnetic_fluctuations_(0), // If True, only drive magnetic field.
+helical_forcing_(0), // Drive with helical forcing - not correct!
 Model(sp.NZ, sp.NXY , sp.L), // Dimensions - stored in base
 mpi_(mpi), // MPI data
 fft_(fft) // FFT data
@@ -70,18 +81,55 @@ fft_(fft) // FFT data
     fftFac_Reynolds_ = 1.0/(Nxy_[0]*2*Nxy_[1]);
     fftFac_Reynolds_=fftFac_Reynolds_*fftFac_Reynolds_;
     
-    // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
-    dont_drive_ky0_modes_Q_ = 0;
+    
+    // Random settings, print to avoid mistakes
+    std::stringstream prnt;
+    prnt << "Rotation set to " << Omega_ <<"\n";
+    mpi_.print1(prnt.str());
+    if (dont_drive_ky0_modes_Q_)
+        mpi_.print1("ky=0 modes are excluded from this calculation!\n");
+    if (drive_only_velocity_fluctuations_)
+        mpi_.print1("No Magnetic driving noise!\n");
+    if (drive_only_magnetic_fluctuations_)
+        mpi_.print1("No velocity driving noise!\n");
+    if (helical_forcing_)
+        mpi_.print1("Using Helical forcing!!!\n");
+
+    
     
     ////////////////////////////////////////////////////
     // Useful arrays to save computation
     Define_Lap2_Arrays_(); // Lap2- Allocates data to lap2_,ilap2_
+    
+    // CFL calculation
+    kmax = 0;
+    double dealiasfac[3] = {2.0, 2.0,3.0};
+    int N[3] = {Nxy_[0],2*Nxy_[1],NZ_};
+    for (int i=0; i<3; ++i) {
+        if (kmax < 2*PI/box_length(i)*(N[i]/dealiasfac[i]))
+            kmax = 2*PI/box_length(i)*(N[i]/dealiasfac[i]);
+    }
+    
+    // Noise cutoff - compare to laplacian so squared
+    noise_range_[0] = sp.noise_range_low*sp.noise_range_low;
+    noise_range_[1] = sp.noise_range_high*sp.noise_range_high;
+    drive_condition_ = Eigen::Array<bool,Eigen::Dynamic,1>(NZ_);
+    print_noise_range_();
     
     // Reynolds stresses
     bzux_m_uzbx_c_ = dcmplxVec::Zero(NZ_);
     bzuy_m_uzby_c_ = dcmplxVec::Zero(NZ_);
     bzux_m_uzbx_d_ = doubVec::Zero(NZ_);
     bzuy_m_uzby_d_ = doubVec::Zero(NZ_);
+    
+    // FOR DIAGNOSTICS ONLY -- TO DELETE!!!
+//    bzux_c_ = dcmplxVec::Zero(NZ_);
+//    bzux_d_= doubVec::Zero(NZ_);
+//    bzux_d_rec_= doubVec::Zero(NZ_);
+//    mbxuz_c_ = dcmplxVec::Zero(NZ_);
+//    mbxuz_d_= doubVec::Zero(NZ_);
+//    mbxuz_d_rec_= doubVec::Zero(NZ_);
+    
     // Send/receive buffers for MPI, for some reason MPI::IN_PLACE is not giving the correct result!
     reynolds_stress_MPI_send_ = doubVec::Zero(num_MF_*NZ_);
     reynolds_stress_MPI_receive_ = doubVec::Zero(num_MF_*NZ_);
@@ -219,7 +267,7 @@ void MHD_fullBQlin::rhs(double t, double dt_lin,
     // Reynolds stresses -- added to at each step in the loop
     bzux_m_uzbx_d_.setZero();
     bzuy_m_uzby_d_.setZero();
-    
+   
     
     /////////////////////////////////////
     //   ALL OF THIS IS PARALLELIZED
@@ -242,7 +290,9 @@ void MHD_fullBQlin::rhs(double t, double dt_lin,
         lap2tmp_ = lap2_[ind_ky];
         lapFtmp_ = -kxtmp_*kxtmp_ + lap2tmp_;
         ilapFtmp_ = 1/lapFtmp_;
-        ilap2tmp_ = ilap2_[ind_ky];;
+        ilap2tmp_ = ilap2_[ind_ky];
+        
+        drive_condition_ = lapFtmp_> -noise_range_[1] && lapFtmp_< -noise_range_[0];
         
         ////////////////////////////////////////
         //              FORM Qkl              //
@@ -256,7 +306,8 @@ void MHD_fullBQlin::rhs(double t, double dt_lin,
             ilapFtmp_(0) = 1; // Avoid infinities (lap2 already done, since stored)
         }
         else {
-            lapFtmp_ = lap2tmp_/lapFtmp_; // lapFtmp_ is no longer lapF!!!
+            lapFtmp_ = drive_condition_.cast<double>()*lap2tmp_/lapFtmp_; // lapFtmp_ is no longer lapF!!!
+            lap2tmp_ *= drive_condition_.cast<double>();
             dealias(lapFtmp_);
             dealias(lap2tmp_);
             // CANNOT USE AFTER THIS!
@@ -264,9 +315,19 @@ void MHD_fullBQlin::rhs(double t, double dt_lin,
                 lapFtmp_(0)=0;
             }
             
-            Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
-            Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
-
+            if (!helical_forcing_){
+                Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
+                Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
+            } else {
+                // This is H(k) = 1/k^2 since lapFtmp = lap2/lapF
+                Qkl_tmp_ << lapFtmp_,lapFtmp_,lapFtmp_,lapFtmp_; // These are off-diagonal components!!
+                Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_;
+            }
+            // Zero out bits with no driving
+            if( drive_only_velocity_fluctuations_ ) // Set magnetic fluctuations to zero
+                Qkl_tmp_.segment(2*NZ_, 2*NZ_).setZero();
+            if( drive_only_magnetic_fluctuations_ ) // Set velocity fluctuations to zero
+                Qkl_tmp_.segment(0, 2*NZ_).setZero();
             
         }
         ////////////////////////////////////////
@@ -303,14 +364,14 @@ void MHD_fullBQlin::rhs(double t, double dt_lin,
         Tmky = ((-1.*kyctmp_))*fft2Dfac_;
         
         // Vector variable definition (automatic)
-        T2Tdz = (2.*kz_.matrix())*fft2Dfac_;
+        T2Tdz = ((2.*Omega_)*kz_.matrix())*fft2Dfac_;
         T2TdzTiLap2TkxbP2Tky = ((2.*(kyctmp_*pow(kxctmp_,2)))*(ilap2tmp_*kz_).matrix())*fft2Dfac_;
         T2TdzTiLap2Tky = ((2.*kyctmp_)*(ilap2tmp_*kz_).matrix())*fft2Dfac_;
         T2TiLap2TkxbTkyP2 = ((2.*(kxctmp_*pow(kyctmp_,2)))*ilap2tmp_.matrix())*fft2Dfac_;
         TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2 = ((-1.*(kxctmp_*pow(kyctmp_,2)))*ilap2tmp_.matrix() + (ilap2tmp_*kz2_).matrix()*kxctmp_)*fft2Dfac_;
         TdzTiLap2Tkxb = ((ilap2tmp_*kz_).matrix()*kxctmp_)*fft2Dfac_;
         TdzTiLap2TkxbP3PLUSTmdzTkxb = ((-1.*kxctmp_)*kz_.matrix() + (ilap2tmp_*kz_).matrix()*pow(kxctmp_,3))*fft2Dfac_;
-        TdzTqPLUSTm2Tdz = (-2.*kz_.matrix() + kz_.matrix()*q_)*fft2Dfac_;
+        TdzTqPLUSTm2Tdz = ((-2.*Omega_)*kz_.matrix() + kz_.matrix()*q_)*fft2Dfac_;
         TiLap2TkxbP2Tky = (ilap2tmp_.matrix()*(kyctmp_*pow(kxctmp_,2)))*fft2Dfac_;
         TiLap2Tky = (ilap2tmp_.matrix()*kyctmp_)*fft2Dfac_;
         Tm2TdzP2TiLap2Tkxb = ((-2.*kxctmp_)*(ilap2tmp_*kz2_).matrix())*fft2Dfac_;
@@ -703,7 +764,15 @@ void MHD_fullBQlin::rhs(double t, double dt_lin,
         //        std::cout << Ckl_out[i] << std::endl << std::endl;
         
         // Add driving noise
-        Ckl_out[i] += Qkl_tmp_.cast<dcmplx>().matrix().asDiagonal();
+        if (!helical_forcing_){
+            Ckl_out[i] += Qkl_tmp_.cast<dcmplx>().matrix().asDiagonal();
+        } else {
+            // Helical forcing - off-diagonal lap2 in each component.
+            Ckl_out[i].block( 0, NZ_, NZ_, NZ_) += Qkl_tmp_.segment(0, NZ_).cast<dcmplx>().matrix().asDiagonal();
+            Ckl_out[i].block( NZ_, 0, NZ_, NZ_) += Qkl_tmp_.segment(NZ_, NZ_).cast<dcmplx>().matrix().asDiagonal();
+            Ckl_out[i].block( 2*NZ_, 3*NZ_, NZ_, NZ_) += Qkl_tmp_.segment(2*NZ_, NZ_).cast<dcmplx>().matrix().asDiagonal();
+            Ckl_out[i].block( 3*NZ_, 2*NZ_, NZ_, NZ_) += Qkl_tmp_.segment(3*NZ_, NZ_).cast<dcmplx>().matrix().asDiagonal();
+        }
         
         /////                                ////
         /////////////////////////////////////////
@@ -739,6 +808,25 @@ void MHD_fullBQlin::rhs(double t, double dt_lin,
         fft_.back_2DFull(reynolds_mat_tmp_);
         // Keep a running sum
         bzux_m_uzbx_d_ += ftfac*(reynolds_mat_tmp_.diagonal().array().real());
+        
+//        ////////////////////////////////////////
+//        //  JUST A DIAGNOSTIC -- TO REMOVE!!!!!
+//        // bz*ux
+//        // Half of Bx reynolds stress
+//        reynolds_mat_tmp_ = -(rey_TdzTiLap2Tkxb.asDiagonal()*C31_+rey_TiLap2Tky.asDiagonal()*C41_);
+//        // fft(fft( a )')'
+//        fft_.back_2DFull(reynolds_mat_tmp_);
+//        // Keep a running sum
+//        bzux_d_ += ftfac*(reynolds_mat_tmp_.diagonal().array().real());
+//        // -bx*uz
+//        // Half of Bx reynolds stress
+//        reynolds_mat_tmp_ = C31_*rey_TdzTiLap2Tkxb.asDiagonal()-C32_*rey_TiLap2Tky.asDiagonal();
+//        // fft(fft( a )')'
+//        fft_.back_2DFull(reynolds_mat_tmp_);
+//        // Keep a running sum
+//        mbxuz_d_ += ftfac*(reynolds_mat_tmp_.diagonal().array().real());
+
+        
         
         
         // bz*uy - uz*by
@@ -779,6 +867,7 @@ void MHD_fullBQlin::rhs(double t, double dt_lin,
     
     // FOR SOME REASON MPI::IN_PLACE IS GIVING INCORRECT RESULTS!
     mpi_.SumAllReduce_double(reynolds_stress_MPI_send_.data(), reynolds_stress_MPI_receive_.data(), num_MFs()*NZ_);
+    
     // Extract from ..._receive_ variable and convert to complex
     // (didn't seem worth the effort of fftw real transforms as time spent here (and in MF transforms) will be very minimal)
     bzux_m_uzbx_c_ = reynolds_stress_MPI_receive_.segment(0,NZ_).cast<dcmplx>();
@@ -795,6 +884,23 @@ void MHD_fullBQlin::rhs(double t, double dt_lin,
     dealias(bzuy_m_uzby_c_);
     //////////////////////////////////////
 
+//    /////////////////////////////////////////
+//    //  JUST A DIAGNOSTIC -- TO REMOVE!!!!!
+//    mpi_.SumAllReduce_double(bzux_d_.data(), bzux_d_rec_.data(), NZ_);
+//    bzux_c_ = bzux_d_rec_.cast<dcmplx>();
+//    fft_.for_1D(bzux_c_.data());
+//    bzux_c_ = fftFac_Reynolds_*kz_*bzux_c_;
+//    dealias(bzux_c_);
+//    mpi_.SumAllReduce_double(mbxuz_d_.data(), mbxuz_d_rec_.data(), NZ_);
+//    mbxuz_c_ = mbxuz_d_rec_.cast<dcmplx>();
+//    fft_.for_1D(mbxuz_c_.data());
+//    mbxuz_c_ = fftFac_Reynolds_*kz_*mbxuz_c_;
+//    dealias(mbxuz_c_);
+//    // PRINT OUT FOR COMPARISON
+//    std::stringstream reystr;
+//    reystr << "Total dz(bz*ux-bx*uz) kz=1 component: " << bzux_m_uzbx_c_(1).real() << std::endl <<
+//        "Contribution from dz(bz*ux): " << bzux_c_(1).real() << ". From dz(-bx*uz): " << mbxuz_c_(1).real() << "\n\n";
+//    mpi_.print1(reystr.str());
 
     
     //////////////////////////////////////
@@ -900,6 +1006,7 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
     // TimeVariables class stores info and data about energy, AM etc.
     // t is time
     
+    tv.start_timing();
     // OUTPUT: energy[1] and [2] contain U and B mean field energies (energy[1]=0 for this)
     // energy[3] and [4] contain u and b fluctuating energies.
     
@@ -942,11 +1049,19 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
             Qkl_tmp_ << lap2tmp_, -ilap2tmp_,lap2tmp_, -ilap2tmp_;
             
             // Energy = trace(Mkl*Ckl), Mkl is diagonal
+            
             Qkl_tmp_ = mult_fac*Qkl_tmp_ * Cin[i].real().diagonal().array();
             
+            
             int num_u_b = num_fluct_/2; // Keep it clear where numbers are coming from.
+        
+            
             energy_u += Qkl_tmp_.head(NZ_*num_u_b).sum();
             energy_b += Qkl_tmp_.tail(NZ_*num_u_b).sum();
+            
+//            std::cout << "kx = " << kxtmp_ << ", ky = " << kytmp_ << ": " << Cin[i].real().diagonal().head(NZ_*num_u_b).sum() <<std::endl;
+            
+            
             //
             //////////////////////////////////////
         }
@@ -1000,7 +1115,7 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
     if (mpi_.my_n_v() == 0) {
         ////////////////////////////////////////////
         ///// All this is only on processor 0  /////
-        double divfac=1.0/totalN2_;
+        double divfac=box_length(2)/totalN2_;
         energy_u = mpi_receive_buff[0]*divfac;
         energy_b = mpi_receive_buff[1]*divfac;
         AM_u = mpi_receive_buff[2]*divfac;
@@ -1016,11 +1131,11 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
         double AM_MU =0, AM_MB=0;
         double diss_MU =0, diss_MB =0;
         
-        energy_MB = (MFin[0].abs2().sum() + MFin[1].abs2().sum())/(NZ_*NZ_);
+        energy_MB = box_length(2)*(MFin[0].abs2().sum() + MFin[1].abs2().sum())/(NZ_*NZ_);
         
-        AM_MB = (MFin[0]*MFin[1].conjugate()).real().sum()/(NZ_*NZ_);
+        AM_MB = box_length(2)*(MFin[0]*MFin[1].conjugate()).real().sum()/(NZ_*NZ_);
         
-        diss_MB = (-eta_/(NZ_*NZ_))*((MFin[0].abs2()*kz2_).sum() + (MFin[1].abs2()*kz2_).sum());
+        diss_MB = box_length(2)*(-eta_/(NZ_*NZ_))*((MFin[0].abs2()*kz2_).sum() + (MFin[1].abs2()*kz2_).sum());
         
         ///////////////////////////////////////
         //////         OUTPUT            //////
@@ -1102,10 +1217,54 @@ void MHD_fullBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmpl
     }
     
     // Save the data
-    tv.Save_Data();
+    tv.Save_Data(t);
+    
+    tv.finish_timing();
+
     
 }
 
+
+
+void MHD_fullBQlin::print_noise_range_(){
+    // Print out total number of driven modes
+    int tot_count = 0, driv_count = 0;
+    int tot_count_all = 0, driv_count_all = 0;// MPI reduced versions
+    for (int i=0; i<Cdimxy(); ++i) {
+        int k_i = i + index_for_k_array(); // k index
+        int ind_ky = ky_index_[k_i];
+        // Form Laplacians using time-dependent kx
+        kytmp_ = ky_[k_i].imag();
+        kxtmp_ = kx_[k_i].imag();
+        lap2tmp_ = lap2_[ind_ky];
+        lapFtmp_ = -kxtmp_*kxtmp_ + lap2tmp_;
+        dealias(lapFtmp_);
+        
+        drive_condition_ = lapFtmp_ != 0.0;
+        tot_count += drive_condition_.cast<int>().sum();;
+        drive_condition_ = lapFtmp_> -noise_range_[1] && lapFtmp_< -noise_range_[0];
+        driv_count += drive_condition_.cast<int>().sum();
+    }
+    mpi_.SumReduce_int(&tot_count, &tot_count_all, 1);
+    mpi_.SumReduce_int(&driv_count, &driv_count_all, 1);
+    std::stringstream noise_output;
+    noise_output << "Driving " << driv_count_all << " out of a total of " << tot_count_all << " modes (k = " << sqrt(noise_range_[0]) << " to " << sqrt(noise_range_[1]) << ")\n";
+    mpi_.print1(noise_output.str());
+    
+}
+
+
+//////////////////////////
+// CFL number
+double MHD_fullBQlin::Calculate_CFL(const dcmplxVec *MFin,const dcmplxMat* Ckl)  {
+    // Returns CFL/dt to calculate dt - in this case CFL/dt = kmax By + q
+    
+    // Mean fields have been previously calculated, so may as well use them
+    double Bxmax = sqrt(Bx_.array().abs2().maxCoeff());
+    double Bymax = sqrt(By_.array().abs2().maxCoeff());
+    // CFL
+    return kmax*(Bymax + Bxmax) + q_;
+}
 
 
 

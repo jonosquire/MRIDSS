@@ -17,19 +17,27 @@ class Model;
 class RK2CN : public Integrator {
 public:
     // Constructor and destructor
-    RK2CN(double t0, double dt, Model &model);
+    RK2CN(double t0, Inputs& SP, Model &model);
     ~RK2CN();
     // Main step
-    int Step(double t, dcmplxVec* MF, dcmplxMat * Ckl);
+    double Step(double t, dcmplxVec* MF, dcmplxMat * Ckl);
     // Reinitialize linear operators
     void Reinitialize_linear_Ops(double t);
+    // Average time step
+    double mean_time_step() const {return dt_mean_/step_count_;};
 private:
     const int dim_Ckl_array_;   // dimension of Ckl array of matrices (Nx*Ny)
     const int size_Ckl_;  //size of individual matrices (4*Nz)
     const int num_MF_;   //  Number of mean fields
     const int size_MF_;  // size of Mean fields (Nz)
     
-    const double dt_;      // timestep
+    // Timestepping
+    double dt_;      // timestep
+    bool variable_dt_;
+    double CFLnum_, dtmax_,dt_mean_;
+    int step_count_;
+    
+    // Model
     Model &model_;    // functor to evaluate f(x,t)
     
     // SPACE FOR INTEGRATOR EVALUATION

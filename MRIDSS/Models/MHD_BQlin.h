@@ -48,6 +48,7 @@ public:
     int Cdimz() const { return nz_Cfull_; };// z matrix dimension
     int MFdimz() const { return NZ_; };  // Size of MF vectors in z
     int num_MFs() const { return num_MF_; };  // Number of mean fields
+    int num_linFs() const { return num_fluct_;}; // Number of fluctuating fields
     // MPI related
     int Cdimxy() const { return mpi_.nxy(); };// x y dimension
     int index_for_k_array() const { return mpi_.minxy_i(); }; // Index for each processor in k_ arrays
@@ -65,7 +66,13 @@ public:
     //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation
     void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin );
-    int num_Reynolds_saves(){return 5;}; //Change if Calc_Energy_AM_Diss is modified!
+    // MODIFIED TO SAVE ALL DATA
+    int num_Reynolds_saves(){return NZ_*2;}; //Change if Calc_Energy_AM_Diss is modified!
+    
+    //////////////////////////
+    // CFL number
+    double Calculate_CFL(const dcmplxVec *MFin,const dcmplxMat* Ckl);
+    double kmax;
 
 private:
     
@@ -105,8 +112,12 @@ private:
     
     // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
     bool dont_drive_ky0_modes_Q_;
+    bool drive_only_velocity_fluctuations_;
     
-   
+    // Noise properties
+    double noise_range_[2]; // High/low cutoff
+    Eigen::Array<bool,Eigen::Dynamic,1> drive_condition_; // Store driving in z as you loop  though x,y
+
     
     ////////////////////////////////////////////////////
     //    TEMPORARY VARIABLES - SAME ACROSS MODELS    //

@@ -36,24 +36,30 @@ public:
     bool dissip_save_Q() {return diss_save_Q_;};
     bool reynolds_save_Q() {return rey_save_Q_;};
     bool MeanField_save_Q() {return MF_save_Q_;};
-    
-    
-    int number_of_saves() {return nsteps_;};
-    
+
     // Save data - Change to each time-step?
-    void Save_Data();
+    void Save_Data(double t);
     
     // Save mean fields - could improve
     void Save_Mean_Fields(dcmplxVec *MFdata,  fftwPlans& fft);
     
+    // Accumulated time
+    void start_timing(){clk_start_ = clock();}; // Start timing
+    void finish_timing(){clk_diff_ += (clock() - clk_start_ )/ (double)CLOCKS_PER_SEC;}; // Stop timing
+    
+    double TVtime() {return clk_diff_;}; // Return time
+    
     
 private:
     // Basic data
-    const int nsteps_;  // Number of saves (length of array)
     const int width_;  // Number of saves for each step in each
     const int numMF_;   // Number of mean fields
     // Reynolds stress
     int num_reynolds_saves_; // Number of saves in Reynolds stress
+    
+    // Timing
+    clock_t clk_start_;
+    double clk_diff_; // Add up timing from all calls to check total is not dominating
     
     // Saving data booleans
     bool en_save_Q_,AM_save_Q_,diss_save_Q_;
@@ -70,11 +76,17 @@ private:
     std::ofstream fileS_angular_momentum_;
     std::ofstream fileS_dissipation_;
     std::ofstream fileS_reynolds_;
+    std::ofstream fileS_time_;
+
     // Saving these variables - file name
     std::string fname_energy_;
     std::string fname_angular_momentum_;
     std::string fname_dissipation_;
     std::string fname_reynolds_;
+    std::string fname_time_;
+
+    
+    std::ios_base::openmode open_append;
     
     // Mean fields
     std::ofstream fileS_mean_fields_;

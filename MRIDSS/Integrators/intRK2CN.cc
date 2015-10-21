@@ -9,11 +9,17 @@
 #include "intRK2CN.h"
 
 
-RK2CN::RK2CN(double t0, double dt, Model &model) :
+RK2CN::RK2CN(double t0, Inputs& SP, Model &model) :
 dim_Ckl_array_(model.Cdimxy()), size_Ckl_(model.Cdimz()),
 num_MF_(model.num_MFs()), size_MF_(model.MFdimz()),
-dt_(dt),  model_(model)
+model_(model),
+step_count_(0), dt_mean_(0.0)
 {
+    if (SP.dt<0)
+        std::cout << "Variable time-step not supported by RK2CN integrator!"<< std::endl;
+    dt_ = fabs(SP.dt); // This integrator requires a time-step to be specified in inputs!!
+    variable_dt_ = 0;
+    
     // Assigning necessary temporary space
     MF_rhs_ =new dcmplxVec[num_MF_];
     MF_th2_ =new dcmplxVec[num_MF_];
@@ -104,7 +110,10 @@ void RK2CN::Reinitialize_linear_Ops(double t){
     delete[] linop_MF_;
 }
 
-int RK2CN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
+double RK2CN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
+    
+    dt_mean_ += dt_;
+    ++step_count_;
     
     // Temporary pointer variables
     dcmplx * dataC, * dataC_rhs, *dataC_th2;
@@ -180,6 +189,6 @@ int RK2CN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
     
 
     
-    return 0;
+    return dt_;
 }
 

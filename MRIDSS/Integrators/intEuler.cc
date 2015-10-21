@@ -8,11 +8,17 @@
 
 #include "intEuler.h"
 
-Euler::Euler(double t0,double dt, Model &model) :
+Euler::Euler(double t0,Inputs& SP, Model &model) :
 dim_Ckl_array_(model.Cdimxy()), size_Ckl_(model.Cdimz()),
 num_MF_(model.num_MFs()), size_MF_(model.MFdimz()),
-dt_(dt),  model_(model)
+model_(model),
+step_count_(0), dt_mean_(0.0)
 {
+    if (SP.dt<0)
+        std::cout << "Variable time-step not supported by Euler integrator!"<< std::endl;
+    dt_ = abs(SP.dt); // This integrator requires a time-step to be specified in inputs!!
+    
+    
     // Assigning necessary temporary space
     MF_new_ =new dcmplxVec[num_MF_];
     for (int i=0; i<num_MF_; i++)
@@ -55,7 +61,10 @@ void Euler::Reinitialize_linear_Ops(double t){
 }
 
 
-int Euler::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
+double Euler::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
+    
+    dt_mean_ += dt_;
+    ++step_count_;
     
     model_.rhs(t, 0, MF, Ckl, MF_new_, Ckl_new_,linop_Ckl_);
     
@@ -68,5 +77,5 @@ int Euler::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
         MF[i] += dt_*(MF_new_[i] + linop_MF_[i]*MF[i]);
     }
     
-    return 0;
+    return dt_;
 }

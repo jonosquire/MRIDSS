@@ -11,30 +11,36 @@
 
 // Remapping for the shearing box
 // This is done in the opposite way to my matlab code -- rather than moving C, just change kx. This then requires nothing complicated and no MPI communication
-void ShearingBox_Remap(Model* mod, dcmplxMat* Ckl){
-// FRIEND TO THE MODEL CLASS -THIS CHANGES THE kx_ array
-    dcmplx kxLfac(0,-1/(2*PI/mod->box_length(0)) );
-    dcmplx kyLfac(0,-1/(2*PI/mod->box_length(1)) );
+
+// DONT USE THIS!!!
+void ShearingBox_Remap(double qt, Model* mod, dcmplxMat* Ckl){
+    //FRIEND TO THE MODEL CLASS -THIS CHANGES THE kx_ array
+    double kxLfac=2*PI/mod->box_length(0);
+    int nx = mod->Nxy_[0]-1;
+    // THIS IS NOT PERFECT!! IS ASYMMETRICAL AS IT IS
+    dcmplx * kxp = mod->kx_pointer();// Pointer to kx data
+    dcmplx * kyp = mod->ky_pointer();// Pointer to ky data
+    int k_i;
+    double kxt;
+    int numk;
     
-    
-    
-    dcmplx * kxp = mod->kx_pointer();// Pointer to kxp data
+    // Go through and fix everything
+    // Since this is only called every qt, can be more than one "nx" out of range
     for (int i=0; i<mod->Cdimxy(); ++i) {
         // Find new kx vector
         // This will become different on each processor even though each is storing the whole array. This is a little strange but probably inconsequential (aside from slight memory usage).
-        int k_i = i + mod->index_for_k_array(); // Index in kx_, ky_ for each process
-        kxp[k_i] = kxp[k_i]*kxLfac + (mod->ky_pointer())[k_i]*kyLfac;
-        
-        // If kx_ is too large zero out Ckl and set kx negative
-        ////////////////////////////////
-        double overlap = kxp[k_i].real()+1 - mod->Nxy_[0]/2;
-        if (overlap>0.5) {
+        k_i = i + mod->index_for_k_array(); // Index in kx_, ky_ for each process
+        kxt = kxp[k_i].imag() + qt*kyp[k_i].imag();
+        if (kxt > nx/2.0*kxLfac) {
+            
+            //std::cout << "Remapped kx " << kxp[k_i].imag()+ qt*kyp[k_i].imag() << " ky " << kyp[k_i].imag() << std::endl;
+            // Put kx back in correct range
+            kxp[k_i] = kxp[k_i] - dcmplx(0,nx*kxLfac);
+            // zero out Ckl
             Ckl[i].setZero();
-            kxp[k_i] = -mod->Nxy_[0]/2+overlap;
         }
-        // Un-normalize again
-        kxp[k_i] = kxp[k_i]/kxLfac;
     }
+    
 }
 
 
@@ -54,7 +60,7 @@ void ShearingBox_Continuous_Remap(double qt, Model* mod, dcmplxMat* Ckl){
         // This will become different on each processor even though each is storing the whole array. This is a little strange but probably inconsequential (aside from slight memory usage).
         k_i = i + mod->index_for_k_array(); // Index in kx_, ky_ for each process
         kxt = kxp[k_i].imag() + qt*kyp[k_i].imag();
-        if (kxt > (nx/2.0-5)*kxLfac) {
+        if (kxt > nx/2.0*kxLfac) {
             //std::cout << "Remapped kx " << kxp[k_i].imag()+ qt*kyp[k_i].imag() << " ky " << kyp[k_i].imag() << std::endl;
             // Put kx back in correct range
             kxp[k_i] = kxp[k_i] - dcmplx(0,nx*kxLfac);
@@ -62,6 +68,8 @@ void ShearingBox_Continuous_Remap(double qt, Model* mod, dcmplxMat* Ckl){
             Ckl[i].setZero();
         }
     }
+    
+    
 }
 
 
@@ -250,6 +258,10 @@ void Load_Full_Data_for_Restart(Model* fluidEqs, Inputs& SP, MPIdata& mpi, dcmpl
             
         }
         final_state_file.close();
+        
+        std::stringstream printstr;
+        printstr << "Loading full solution from disk at t = " << t_init << "\n\n";
+        mpi.print1(printstr.str());
     }
 }
 //

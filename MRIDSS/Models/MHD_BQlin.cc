@@ -19,6 +19,8 @@ equations_name("MHD_BQlin"),
 num_MF_(2), num_fluct_(4),
 q_(sp.q), f_noise_(sp.f_noise), nu_(sp.nu), eta_(sp.eta),
 QL_YN_(sp.QuasiLinearQ),
+dont_drive_ky0_modes_Q_(0), // turn off driving of ky=0, kx,kz != 0 modes
+drive_only_velocity_fluctuations_(1), // If True, only drive magnetic field.
 Model(sp.NZ, sp.NXY , sp.L), // Dimensions - stored in base
 mpi_(mpi), // MPI data
 fft_(fft) // FFT data
@@ -66,8 +68,16 @@ fft_(fft) // FFT data
     fft2Dfac_=1.0/NZ_/NZ_;
     fft1Dfac_ = 1.0/NZ_;
     
-    // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
-    dont_drive_ky0_modes_Q_ = 1;
+    // CFL calculation
+    kmax = 0;
+    double dealiasfac[3] = {2.0, 2.0,3.0};
+    int N[3] = {Nxy_[0],2*Nxy_[1],NZ_};
+    for (int i=0; i<3; ++i) {
+        if (kmax < 2*PI/box_length(i)*(N[i]/dealiasfac[i]))
+            kmax = 2*PI/box_length(i)*(N[i]/dealiasfac[i]);
+    }
+
+    
     
     ////////////////////////////////////////////////////
     // Useful arrays to save computation
@@ -83,6 +93,12 @@ fft_(fft) // FFT data
     reynolds_stress_MPI_receive_ = doubVec::Zero(num_MF_*NZ_);
     
     reynolds_save_tmp_ = new double[5];
+    
+    
+    // Noise cutoff - compare to laplacian so squared
+    noise_range_[0] = sp.noise_range_low*sp.noise_range_low;
+    noise_range_[1] = sp.noise_range_high*sp.noise_range_high;
+    drive_condition_ = Eigen::Array<bool,Eigen::Dynamic,1>(NZ_);
     
     
     ////////////////////////////////////////////////////
@@ -215,7 +231,9 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         lap2tmp_ = lap2_[ind_ky];
         lapFtmp_ = -kxtmp_*kxtmp_ + lap2tmp_;
         ilapFtmp_ = 1/lapFtmp_;
-        ilap2tmp_ = ilap2_[ind_ky];;
+        ilap2tmp_ = ilap2_[ind_ky];
+        
+        drive_condition_ = lapFtmp_> -noise_range_[1] && lapFtmp_< -noise_range_[0];
         
         ////////////////////////////////////////
         //              FORM Qkl              //
@@ -229,15 +247,20 @@ void MHD_BQlin::rhs(double t, double dt_lin,
             ilapFtmp_(0) = 1; // Avoid infinities (lap2 already done, since stored)
         }
         else {
-            lapFtmp_ = lap2tmp_/lapFtmp_; // lapFtmp_ is no longer lapF!!!
+            lapFtmp_ = drive_condition_.cast<double>()*lap2tmp_/lapFtmp_; // lapFtmp_ is no longer lapF!!!
+            lap2tmp_ *= drive_condition_.cast<double>();
             dealias(lapFtmp_);
             dealias(lap2tmp_);
+
             // CANNOT USE AFTER THIS!
             if (kytmp_==0.0) { // Don't drive the ky=kz=0 component (variables not invertible)
                 lapFtmp_(0)=0;
             }
 
             Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
+            if( drive_only_velocity_fluctuations_ )
+                Qkl_tmp_.segment(2*NZ_, 2*NZ_).setZero();
+            
             Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
 
             
@@ -296,7 +319,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         ////////////////////////////////////////////////////////
         ///       AUTOMATICALLY GENERATED EQUATIONS         /////
         ///       see GenerateC++Equations.nb in MMA        /////
-        
+        {
         Ctmp_1_ = Tky*C31_;
         fft_.back_2DFull( Ctmp_1_ );
         Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
@@ -522,6 +545,7 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         Ctmp_3_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C34_;
         dealias(Ctmp_3_);
         Ckl_out[i].block( 3*NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_3_;
+        }
         ///     AUTOMATICALLY GENERATED EQUATIONS - END       ///
         ////////////////////////////////////////////////////////
 
@@ -586,7 +610,9 @@ void MHD_BQlin::rhs(double t, double dt_lin,
         //////                                               //////
         ///////////////////////////////////////////////////////////
     
-        
+        //TO DELETE!!!!!
+//        Ckl_out[i] = Ckl_in[i];
+
         // Add to adjoint
         Ckl_out[i] += Ckl_out[i].adjoint().eval();
         
@@ -736,20 +762,36 @@ void MHD_BQlin::dealias(doubVec& vec) {
 
 
 
-
+//////////////////////////
+// CFL number
+double MHD_BQlin::Calculate_CFL(const dcmplxVec *MFin,const dcmplxMat* Ckl)  {
+    // Returns CFL/dt to calculate dt - in this case CFL/dt = kmax By + q
+    
+    // By has been previously calculated, so may as well use it
+    double Bymax = sqrt(By_.array().abs2().maxCoeff());
+    // Bx
+    By_ = MFin[1].matrix()*fft1Dfac_; // fft back doesn't include normalization
+    fft_.back_1D(By_.data());
+    double Bxmax = sqrt(By_.array().abs2().maxCoeff());
+    // CFL
+    return kmax*Bymax + kmax*Bxmax + q_;
+    
+}
 
 
 
 //////////////////////////////////////////////////////////
 //////                                              //////
 //////          ENERGY, ANGULAR MOMENTUM etc.       //////
-//////                                              //////
+//////                                              /////
 //////////////////////////////////////////////////////////
 
 void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec *MFin, const dcmplxMat *Cin ) {
     // Energy, angular momentum and dissipation of the solution MFin and Cin
     // TimeVariables class stores info and data about energy, AM etc.
     // t is time
+    
+    tv.start_timing();
     
     // OUTPUT: energy[1] and [2] contain U and B mean field energies (energy[1]=0 for this)
     // energy[3] and [4] contain u and b fluctuating energies.
@@ -853,7 +895,7 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
     if (mpi_.my_n_v() == 0) {
         ////////////////////////////////////////////
         ///// All this is only on processor 0  /////
-        double divfac=1.0/totalN2_;
+        double divfac=box_length(2)/totalN2_;
         energy_u = mpi_receive_buff[0]*divfac;
         energy_b = mpi_receive_buff[1]*divfac;
         AM_u = mpi_receive_buff[2]*divfac;
@@ -869,11 +911,11 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
         double AM_MU =0, AM_MB=0;
         double diss_MU =0, diss_MB =0;
         
-        energy_MB = (MFin[0].abs2().sum() + MFin[1].abs2().sum())/(NZ_*NZ_);
+        energy_MB = box_length(2)*(MFin[0].abs2().sum() + MFin[1].abs2().sum())/(NZ_*NZ_);
         
-        AM_MB = (MFin[0]*MFin[1].conjugate()).real().sum()/(NZ_*NZ_);
+        AM_MB = box_length(2)*(MFin[0]*MFin[1].conjugate()).real().sum()/(NZ_*NZ_);
         
-        diss_MB = (-eta_/(NZ_*NZ_))*((MFin[0].abs2()*kz2_).sum() + (MFin[1].abs2()*kz2_).sum());
+        diss_MB = box_length(2)*(-eta_/(NZ_*NZ_))*((MFin[0].abs2()*kz2_).sum() + (MFin[1].abs2()*kz2_).sum());
         
         ///////////////////////////////////////
         //////         OUTPUT            //////
@@ -911,14 +953,20 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
             // Have assumed k0 to be lowest kz! i.e., driving largest dynamo possible in the box
             // There may be slight errors here from saving using the updated values of MFin, presumably this is a small effect, especially at high resolution (low dt) and in steady state.
             double* rey_point = tv.current_reynolds();
-            rey_point[0] = -q_*(MFin[0]*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
-            rey_point[1] = (bzuy_m_uzby_c_*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
-            rey_point[2] = -eta_ *sqrt((kz2_*MFin[1]).abs2().sum());
-            rey_point[3] = (bzux_m_uzbx_c_*MFin[0].conjugate()).real().sum()/sqrt(MFin[0].abs2().sum());
-            rey_point[4] = -eta_ *sqrt((kz2_*MFin[0]).abs2().sum());
-            //            rey_point[0] = real(bzuy_m_uzby_c_(1)*conj(MFin[1](1))) ;
-            //            rey_point[1] = real(bzux_m_uzbx_c_(1)*conj(MFin[1](1))) ;
-            //
+//            rey_point[0] = -q_*(MFin[0]*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
+//            rey_point[1] = (bzuy_m_uzby_c_*MFin[1].conjugate()).real().sum()/sqrt(MFin[1].abs2().sum());
+//            rey_point[2] = -eta_ *sqrt((kz2_*MFin[1]).abs2().sum());
+//            rey_point[3] = (bzux_m_uzbx_c_*MFin[0].conjugate()).real().sum()/sqrt(MFin[0].abs2().sum());
+//            rey_point[4] = -eta_ *sqrt((kz2_*MFin[0]).abs2().sum());
+            
+            // MODIFIED TO SAVE ALL DATA !!!!!!!!!!!
+            fft_.back_1D(bzux_m_uzbx_c_.data());
+            fft_.back_1D(bzuy_m_uzby_c_.data());
+            reynolds_stress_MPI_send_ << bzux_m_uzbx_c_.real(), bzuy_m_uzby_c_.real();
+            for (int i=0; i<num_MFs()*NZ_; ++i) {
+                rey_point[i] = reynolds_stress_MPI_send_(i);
+            }
+
             //////////////////////////////////////
         }
         
@@ -927,7 +975,9 @@ void MHD_BQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmplxVec
     }
     
     // Save the data
-    tv.Save_Data();
+    tv.Save_Data(t);
+    
+    tv.finish_timing();
     
 }
 

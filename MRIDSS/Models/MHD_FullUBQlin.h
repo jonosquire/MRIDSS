@@ -48,6 +48,7 @@ public:
     int Cdimz() const { return nz_Cfull_; };// z matrix dimension
     int MFdimz() const { return NZ_; };  // Size of MF vectors in z
     int num_MFs() const { return num_MF_; };  // Number of mean fields
+    int num_linFs() const { return num_fluct_;}; // Number of fluctuating fields
     // MPI related
     int Cdimxy() const { return mpi_.nxy(); };// x y dimension
     int index_for_k_array() const { return mpi_.minxy_i(); }; // Index for each processor in k_ arrays
@@ -66,6 +67,11 @@ public:
     //  Calculate energy, angular momentum and dissipation
     void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin );
     int num_Reynolds_saves(){return 5;}; //Change if Calc_Energy_AM_Diss is modified!
+    
+    //////////////////////////
+    // CFL number
+    double Calculate_CFL(const dcmplxVec *MFin,const dcmplxMat* Ckl);
+    double kmax;
 
 private:
     
@@ -81,6 +87,7 @@ private:
     const double q_;
     const double f_noise_; // driving noise
     bool QL_YN_; // Turn on quasi-linear feedback
+    const double B0z_; // Mean vertical field
     
     // MPI data
     MPIdata& mpi_; // Reference to MPI data
@@ -107,12 +114,17 @@ private:
     
     // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
     bool dont_drive_ky0_modes_Q_;
+    bool drive_only_velocity_fluctuations_;
+    double Omega_; // Rotation rate
+
     // Noise properties
     double noise_range_[2]; // High/low cutoff
     Eigen::Array<bool,Eigen::Dynamic,1> drive_condition_; // Store driving in z as you loop  though x,y
     void print_noise_range_();
     
-   
+    // Multiplication factors for the noise
+    double velocity_noise_mult_, magnetic_noise_mult_;
+    
     
     ////////////////////////////////////////////////////
     //    TEMPORARY VARIABLES - SAME ACROSS MODELS    //
@@ -156,7 +168,7 @@ private:
     //  AUTO GENERATED VARIABLES
     
     // Automatically generated temporary variables - class definition
-    dcmplxVecM T2Tdz, T2TdzP2TiLap2Tkxb, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzTiLap2Tkxb, TdzTiLap2TkxbP3PLUSTmdzTkxb, TdzTkxbPLUSTmdzTiLap2TkxbP3, TdzTqPLUSTm2Tdz, TiLap2TkxbP2Tky, TiLap2TkxbTkyP2PLUSTmdzP2TiLap2Tkxb, TiLap2Tky, Tm2TdzP2TiLap2Tkxb, Tm2TdzTiLap2TkxbP2Tky, Tm2TdzTiLap2Tky, Tm2TiLap2TkxbTkyP2, TmdzTiLap2Tkxb, TmdzTq, TmiLap2TkxbP2Tky, TmiLap2Tky;
+    dcmplxVecM T2Tdz, T2TdzP2TiLap2Tkxb, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TB0zTdz, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzTiLap2Tkxb, TdzTiLap2TkxbP3PLUSTmdzTkxb, TdzTkxbPLUSTmdzTiLap2TkxbP3, TdzTqPLUSTm2Tdz, TiLap2TkxbP2Tky, TiLap2TkxbTkyP2PLUSTmdzP2TiLap2Tkxb, TiLap2Tky, Tm2TdzP2TiLap2Tkxb, Tm2TdzTiLap2TkxbP2Tky, Tm2TdzTiLap2Tky, Tm2TiLap2TkxbTkyP2, TmdzTiLap2Tkxb, TmdzTq, TmiLap2TkxbP2Tky, TmiLap2Tky;
     
     dcmplx Tkxb, Tky, Tm2TkxbTkyTq, Tmkxb, Tmky;
     

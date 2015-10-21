@@ -17,9 +17,12 @@
 MHD_FullUBQlin::MHD_FullUBQlin(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) :
 equations_name("MHD_FullUBQlin"),
 num_MF_(4), num_fluct_(4),
-q_(sp.q), f_noise_(sp.f_noise), nu_(sp.nu), eta_(sp.eta),
+q_(sp.q), Omega_(sp.omega), // Rotation
+f_noise_(sp.f_noise), nu_(sp.nu), eta_(sp.eta),B0z_(sp.B0z),// Mean B0z
 QL_YN_(sp.QuasiLinearQ),
 dont_drive_ky0_modes_Q_ (0),// turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
+drive_only_velocity_fluctuations_(0), // If True, only drive velocity field.
+velocity_noise_mult_(sp.v_noise_mult),magnetic_noise_mult_(sp.b_noise_mult), //Multiply each noise by these numbers
 Model(sp.NZ, sp.NXY , sp.L), // Dimensions - stored in base
 mpi_(mpi), // MPI data
 fft_(fft) // FFT data
@@ -77,6 +80,15 @@ fft_(fft) // FFT data
     Define_Lap2_Arrays_(); // Lap2- Allocates data to lap2_,ilap2_
     
     
+    // CFL calculation
+    kmax = 0;
+    double dealiasfac[3] = {2.0, 2.0,3.0};
+    int N[3] = {Nxy_[0],2*Nxy_[1],NZ_};
+    for (int i=0; i<3; ++i) {
+        if (kmax < 2*PI/box_length(i)*(N[i]/dealiasfac[i]))
+            kmax = 2*PI/box_length(i)*(N[i]/dealiasfac[i]);
+    }
+    
     // Noise cutoff - compare to laplacian so squared
     noise_range_[0] = sp.noise_range_low*sp.noise_range_low;
     noise_range_[1] = sp.noise_range_high*sp.noise_range_high;
@@ -98,6 +110,16 @@ fft_(fft) // FFT data
     reynolds_stress_MPI_receive_ = doubVec::Zero(num_MF_*NZ_);
     
     reynolds_save_tmp_ = new double[5];
+    
+    
+    // Random settings, print to avoid mistakes
+    std::stringstream prnt;
+    prnt << "Rotation set to " << Omega_ <<"\n";
+    mpi_.print1(prnt.str());
+    if (dont_drive_ky0_modes_Q_)
+        mpi_.print1("ky=0 modes are excluded from this calculation!\n");
+    if (drive_only_velocity_fluctuations_)
+        mpi_.print1("No Magnetic driving noise!\n");
     
     
     ////////////////////////////////////////////////////
@@ -154,12 +176,14 @@ fft_(fft) // FFT data
     /////////////////////////////////////////////////
     //  AUTO GENERATED VARIABLES
     
+    
     // Automatically generated temporary variables - class constructor
     T2Tdz = dcmplxVecM(NZ_);
     T2TdzP2TiLap2Tkxb = dcmplxVecM(NZ_);
     T2TdzTiLap2TkxbP2Tky = dcmplxVecM(NZ_);
     T2TdzTiLap2Tky = dcmplxVecM(NZ_);
     T2TiLap2TkxbTkyP2 = dcmplxVecM(NZ_);
+    TB0zTdz = dcmplxVecM(NZ_);
     TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2 = dcmplxVecM(NZ_);
     TdzTiLap2Tkxb = dcmplxVecM(NZ_);
     TdzTiLap2TkxbP3PLUSTmdzTkxb = dcmplxVecM(NZ_);
@@ -326,8 +350,13 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
                 lapFtmp_(0)=0;
             }
             
-            Qkl_tmp_ << lapFtmp_, lap2tmp_, lapFtmp_, lap2tmp_;
+            Qkl_tmp_ << velocity_noise_mult_*lapFtmp_, velocity_noise_mult_*lap2tmp_, magnetic_noise_mult_*lapFtmp_, magnetic_noise_mult_*lap2tmp_;
+            
             Qkl_tmp_ = (f_noise_*f_noise_*totalN2_*mult_noise_fac_)*Qkl_tmp_.abs();
+            
+            if( drive_only_velocity_fluctuations_ ) // Set magnetic fluctuations to zero
+                Qkl_tmp_.segment(2*NZ_, 2*NZ_).setZero();
+
         }
         }
         ////////////////////////////////////////
@@ -354,6 +383,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
         C42_ = Ckl_in[i].block( 3*NZ_, NZ_, NZ_, NZ_);
         C43_ = Ckl_in[i].block( 3*NZ_, 2*NZ_, NZ_, NZ_);
         C44_ = Ckl_in[i].block( 3*NZ_, 3*NZ_, NZ_, NZ_);
+
         
         // Scalar variable definition (automatic)
         Tkxb = (kxctmp_)*fft2Dfac_;
@@ -363,16 +393,17 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
         Tmky = ((-1.*kyctmp_))*fft2Dfac_;
         
         // Vector variable definition (automatic)
-        T2Tdz = (2.*kz_.matrix())*fft2Dfac_;
+        T2Tdz = ((2.*Omega_)*kz_.matrix())*fft2Dfac_;
         T2TdzP2TiLap2Tkxb = ((2.*kxctmp_)*(ilap2tmp_*kz2_).matrix())*fft2Dfac_;
         T2TdzTiLap2TkxbP2Tky = ((2.*(kyctmp_*pow(kxctmp_,2)))*(ilap2tmp_*kz_).matrix())*fft2Dfac_;
         T2TdzTiLap2Tky = ((2.*kyctmp_)*(ilap2tmp_*kz_).matrix())*fft2Dfac_;
         T2TiLap2TkxbTkyP2 = ((2.*(kxctmp_*pow(kyctmp_,2)))*ilap2tmp_.matrix())*fft2Dfac_;
+        TB0zTdz = (B0z_*kz_.matrix())*fft2Dfac_;
         TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2 = ((-1.*(kxctmp_*pow(kyctmp_,2)))*ilap2tmp_.matrix() + (ilap2tmp_*kz2_).matrix()*kxctmp_)*fft2Dfac_;
         TdzTiLap2Tkxb = ((ilap2tmp_*kz_).matrix()*kxctmp_)*fft2Dfac_;
         TdzTiLap2TkxbP3PLUSTmdzTkxb = ((-1.*kxctmp_)*kz_.matrix() + (ilap2tmp_*kz_).matrix()*pow(kxctmp_,3))*fft2Dfac_;
         TdzTkxbPLUSTmdzTiLap2TkxbP3 = ((-1.*pow(kxctmp_,3))*(ilap2tmp_*kz_).matrix() + kxctmp_*kz_.matrix())*fft2Dfac_;
-        TdzTqPLUSTm2Tdz = (-2.*kz_.matrix() + kz_.matrix()*q_)*fft2Dfac_;
+        TdzTqPLUSTm2Tdz = ((-2.*Omega_)*kz_.matrix() + kz_.matrix()*q_)*fft2Dfac_;
         TiLap2TkxbP2Tky = (ilap2tmp_.matrix()*(kyctmp_*pow(kxctmp_,2)))*fft2Dfac_;
         TiLap2TkxbTkyP2PLUSTmdzP2TiLap2Tkxb = ((-1.*kxctmp_)*(ilap2tmp_*kz2_).matrix() + ilap2tmp_.matrix()*(kxctmp_*pow(kyctmp_,2)))*fft2Dfac_;
         TiLap2Tky = (ilap2tmp_.matrix()*kyctmp_)*fft2Dfac_;
@@ -384,7 +415,6 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
         TmdzTq = ((-1.*q_)*kz_.matrix())*fft2Dfac_;
         TmiLap2TkxbP2Tky = ((-1.*(kyctmp_*pow(kxctmp_,2)))*ilap2tmp_.matrix())*fft2Dfac_;
         TmiLap2Tky = ((-1.*kyctmp_)*ilap2tmp_.matrix())*fft2Dfac_;
-            
         }
         
         
@@ -392,8 +422,11 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
         ////////////////////////////////////////////////////////
         ///       AUTOMATICALLY GENERATED EQUATIONS         /////
         ///       see GenerateC++Equations.nb in MMA        /////
-        if (QL_YN_)
         {
+            ////////////////////////////////////////////////////////
+            ///       AUTOMATICALLY GENERATED EQUATIONS         /////
+            ///       see GenerateC++Equations.nb in MMA        /////
+            
             Ctmp_1_ = Tkxb*C31_;
             fft_.back_2DFull( Ctmp_1_ );
             Ctmp_1_ = Bx_.asDiagonal()*Ctmp_1_;
@@ -434,7 +467,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             fft_.for_2DFull( Ctmp_1_ );
             Ctmp_5_ = Ctmp_10_ + Ctmp_11_ + Ctmp_12_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_5_ );
-            Ctmp_12_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_5_ + (T2Tdz/fft2Dfac_).asDiagonal()*C21_ + (Tm2TkxbTkyTq/fft2Dfac_)*C11_);
+            Ctmp_12_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_5_ + (T2Tdz/fft2Dfac_).asDiagonal()*C21_ + (Tm2TkxbTkyTq/fft2Dfac_)*C11_) + (TB0zTdz/fft2Dfac_).asDiagonal()*C31_;
             dealias(Ctmp_12_);
             Ckl_out[i].block( 0, 0, NZ_, NZ_) = Ctmp_12_;
             
@@ -480,7 +513,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             fft_.for_2DFull( Ctmp_1_ );
             Ctmp_5_ = Ctmp_10_ + Ctmp_11_ + Ctmp_12_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_5_ );
-            Ctmp_12_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_5_ + (T2Tdz/fft2Dfac_).asDiagonal()*C22_ + (Tm2TkxbTkyTq/fft2Dfac_)*C12_);
+            Ctmp_12_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_5_ + (T2Tdz/fft2Dfac_).asDiagonal()*C22_ + (Tm2TkxbTkyTq/fft2Dfac_)*C12_) + (TB0zTdz/fft2Dfac_).asDiagonal()*C32_;
             dealias(Ctmp_12_);
             Ckl_out[i].block( 0, NZ_, NZ_, NZ_) = Ctmp_12_;
             
@@ -526,7 +559,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             fft_.for_2DFull( Ctmp_1_ );
             Ctmp_5_ = Ctmp_10_ + Ctmp_11_ + Ctmp_12_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_5_ );
-            Ctmp_12_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_5_ + (T2Tdz/fft2Dfac_).asDiagonal()*C23_ + (Tm2TkxbTkyTq/fft2Dfac_)*C13_);
+            Ctmp_12_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_5_ + (T2Tdz/fft2Dfac_).asDiagonal()*C23_ + (Tm2TkxbTkyTq/fft2Dfac_)*C13_) + (TB0zTdz/fft2Dfac_).asDiagonal()*C33_;
             dealias(Ctmp_12_);
             Ckl_out[i].block( 0, 2*NZ_, NZ_, NZ_) = Ctmp_12_;
             
@@ -572,7 +605,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             fft_.for_2DFull( Ctmp_1_ );
             Ctmp_5_ = Ctmp_10_ + Ctmp_11_ + Ctmp_12_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_5_ );
-            Ctmp_12_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_5_ + (T2Tdz/fft2Dfac_).asDiagonal()*C24_ + (Tm2TkxbTkyTq/fft2Dfac_)*C14_);
+            Ctmp_12_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_5_ + (T2Tdz/fft2Dfac_).asDiagonal()*C24_ + (Tm2TkxbTkyTq/fft2Dfac_)*C14_) + (TB0zTdz/fft2Dfac_).asDiagonal()*C34_;
             dealias(Ctmp_12_);
             Ckl_out[i].block( 0, 3*NZ_, NZ_, NZ_) = Ctmp_12_;
             
@@ -610,7 +643,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_10_ = dzBy_.asDiagonal()*Ctmp_10_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_10_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_10_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C11_;
+            Ctmp_10_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C41_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C11_;
             dealias(Ctmp_10_);
             Ckl_out[i].block( NZ_, 0, NZ_, NZ_) = Ctmp_10_;
             
@@ -648,7 +681,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_10_ = dzBy_.asDiagonal()*Ctmp_10_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_10_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_10_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C12_;
+            Ctmp_10_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C42_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C12_;
             dealias(Ctmp_10_);
             Ckl_out[i].block( NZ_, NZ_, NZ_, NZ_) = Ctmp_10_;
             
@@ -686,7 +719,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_10_ = dzBy_.asDiagonal()*Ctmp_10_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_10_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_10_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C13_;
+            Ctmp_10_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C43_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C13_;
             dealias(Ctmp_10_);
             Ckl_out[i].block( NZ_, 2*NZ_, NZ_, NZ_) = Ctmp_10_;
             
@@ -724,7 +757,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_10_ = dzBy_.asDiagonal()*Ctmp_10_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_10_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_10_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C14_;
+            Ctmp_10_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C44_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C14_;
             dealias(Ctmp_10_);
             Ckl_out[i].block( NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_10_;
             
@@ -750,7 +783,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_6_ = dzUx_.asDiagonal()*Ctmp_6_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_6_ = Ctmp_1_;
+            Ctmp_6_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C11_;
             dealias(Ctmp_6_);
             Ckl_out[i].block( 2*NZ_, 0, NZ_, NZ_) = Ctmp_6_;
             
@@ -776,7 +809,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_6_ = dzUx_.asDiagonal()*Ctmp_6_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_6_ = Ctmp_1_;
+            Ctmp_6_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C12_;
             dealias(Ctmp_6_);
             Ckl_out[i].block( 2*NZ_, NZ_, NZ_, NZ_) = Ctmp_6_;
             
@@ -802,7 +835,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_6_ = dzUx_.asDiagonal()*Ctmp_6_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_6_ = Ctmp_1_;
+            Ctmp_6_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C13_;
             dealias(Ctmp_6_);
             Ckl_out[i].block( 2*NZ_, 2*NZ_, NZ_, NZ_) = Ctmp_6_;
             
@@ -828,7 +861,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_6_ = dzUx_.asDiagonal()*Ctmp_6_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_6_ = Ctmp_1_;
+            Ctmp_6_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C14_;
             dealias(Ctmp_6_);
             Ckl_out[i].block( 2*NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_6_;
             
@@ -866,7 +899,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_10_ = dzdzUy_.asDiagonal()*Ctmp_10_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_10_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_10_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C31_;
+            Ctmp_10_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C21_ + (TmdzTq/fft2Dfac_).asDiagonal()*C31_;
             dealias(Ctmp_10_);
             Ckl_out[i].block( 3*NZ_, 0, NZ_, NZ_) = Ctmp_10_;
             
@@ -904,7 +937,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_10_ = dzdzUy_.asDiagonal()*Ctmp_10_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_10_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_10_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C32_;
+            Ctmp_10_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C22_ + (TmdzTq/fft2Dfac_).asDiagonal()*C32_;
             dealias(Ctmp_10_);
             Ckl_out[i].block( 3*NZ_, NZ_, NZ_, NZ_) = Ctmp_10_;
             
@@ -942,7 +975,7 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_10_ = dzdzUy_.asDiagonal()*Ctmp_10_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_10_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_10_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C33_;
+            Ctmp_10_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C23_ + (TmdzTq/fft2Dfac_).asDiagonal()*C33_;
             dealias(Ctmp_10_);
             Ckl_out[i].block( 3*NZ_, 2*NZ_, NZ_, NZ_) = Ctmp_10_;
             
@@ -980,19 +1013,22 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
             Ctmp_10_ = dzdzUy_.asDiagonal()*Ctmp_10_;
             Ctmp_1_ = Ctmp_1_ + Ctmp_10_ + Ctmp_2_ + Ctmp_3_ + Ctmp_4_ + Ctmp_5_ + Ctmp_6_ + Ctmp_7_ + Ctmp_8_ + Ctmp_9_;
             fft_.for_2DFull( Ctmp_1_ );
-            Ctmp_10_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C34_;
+            Ctmp_10_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C24_ + (TmdzTq/fft2Dfac_).asDiagonal()*C34_;
             dealias(Ctmp_10_);
             Ckl_out[i].block( 3*NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_10_;
+            ///     AUTOMATICALLY GENERATED EQUATIONS - END       ///
+            ////////////////////////////////////////////////////////
         }
-        else // THIS ASSUMES QL_YN_=0 IMPLIES ZERO MEAN FIELD!!!
-        {
-            // Evolves C in zero mean field - much faster when possible!
-            Coperator_with_zero_mean_fields(1, C11_, C21_, C31_, Ckl_out[i]);
-            Coperator_with_zero_mean_fields(2, C12_, C22_, C32_, Ckl_out[i]);
-            Coperator_with_zero_mean_fields(3, C13_, C23_, C33_, Ckl_out[i]);
-            Coperator_with_zero_mean_fields(4, C14_, C24_, C34_, Ckl_out[i]);
-
-        }
+        // Legacy code used to start QL evolution at a specific time. 
+//        else // THIS ASSUMES QL_YN_=0 IMPLIES ZERO MEAN FIELD!!!
+//        {
+//            // Evolves C in zero mean field - much faster when possible!
+//            Coperator_with_zero_mean_fields(1, C11_, C21_, C31_, Ckl_out[i]);
+//            Coperator_with_zero_mean_fields(2, C12_, C22_, C32_, Ckl_out[i]);
+//            Coperator_with_zero_mean_fields(3, C13_, C23_, C33_, Ckl_out[i]);
+//            Coperator_with_zero_mean_fields(4, C14_, C24_, C34_, Ckl_out[i]);
+//
+//        }
         ///     AUTOMATICALLY GENERATED EQUATIONS - END       ///
         ////////////////////////////////////////////////////////
         
@@ -1128,11 +1164,11 @@ void MHD_FullUBQlin::rhs(double t, double dt_lin,
     ////   MEAN FIELDS    ////////////////
     if (QL_YN_) {
         // B update
-        MFout[0] = bzux_m_uzbx_c_;
-        MFout[1] = -q_*MFin[0] + bzuy_m_uzby_c_;
+        MFout[0] = B0z_*kz_*MFin[2] + bzux_m_uzbx_c_;
+        MFout[1] = -q_*MFin[0] + B0z_*kz_*MFin[3] + bzuy_m_uzby_c_;
         // U update
-        MFout[2] = 2*MFin[3] + ux_rey_stress_c_;
-        MFout[3] = (q_-2)*MFin[2] + uy_rey_stress_c_;
+        MFout[2] = 2*Omega_*MFin[3] + B0z_*kz_*MFin[0] + ux_rey_stress_c_;
+        MFout[3] = (q_-2.0*Omega_)*MFin[2] + B0z_*kz_*MFin[1] + uy_rey_stress_c_;
     } else { // Still calculate Reynolds stress in linear calculation
         // B update
         MFout[1].setZero();
@@ -1232,6 +1268,8 @@ void MHD_FullUBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmp
     // Energy, angular momentum and dissipation of the solution MFin and Cin
     // TimeVariables class stores info and data about energy, AM etc.
     // t is time
+    
+    tv.start_timing();
     
     // OUTPUT: energy[1] and [2] contain U and B mean field energies (energy[1]=0 for this)
     // energy[3] and [4] contain u and b fluctuating energies.
@@ -1333,7 +1371,7 @@ void MHD_FullUBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmp
     if (mpi_.my_n_v() == 0) {
         ////////////////////////////////////////////
         ///// All this is only on processor 0  /////
-        double divfac=1.0/totalN2_;
+        double divfac=box_length(2)/totalN2_;
         energy_u = mpi_receive_buff[0]*divfac;
         energy_b = mpi_receive_buff[1]*divfac;
         AM_u = mpi_receive_buff[2]*divfac;
@@ -1349,14 +1387,14 @@ void MHD_FullUBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmp
         double AM_MU =0, AM_MB=0;
         double diss_MU =0, diss_MB =0;
         
-        energy_MB = (MFin[0].abs2().sum() + MFin[1].abs2().sum())/(NZ_*NZ_);
-        energy_MU = (MFin[2].abs2().sum() + MFin[3].abs2().sum())/(NZ_*NZ_);
+        energy_MB = box_length(2)*(MFin[0].abs2().sum() + MFin[1].abs2().sum())/(NZ_*NZ_);
+        energy_MU = box_length(2)*(MFin[2].abs2().sum() + MFin[3].abs2().sum())/(NZ_*NZ_);
 
-        AM_MB = (MFin[0]*MFin[1].conjugate()).real().sum()/(NZ_*NZ_);
-        AM_MU = (MFin[2]*MFin[3].conjugate()).real().sum()/(NZ_*NZ_);
+        AM_MB = box_length(2)*(MFin[0]*MFin[1].conjugate()).real().sum()/(NZ_*NZ_);
+        AM_MU = box_length(2)*(MFin[2]*MFin[3].conjugate()).real().sum()/(NZ_*NZ_);
         
-        diss_MB = (-eta_/(NZ_*NZ_))*((MFin[0].abs2()*kz2_).sum() + (MFin[1].abs2()*kz2_).sum() );
-        diss_MU = (-nu_/(NZ_*NZ_))*((MFin[2].abs2()*kz2_).sum() + (MFin[3].abs2()*kz2_).sum());
+        diss_MB = box_length(2)*(-eta_/(NZ_*NZ_))*((MFin[0].abs2()*kz2_).sum() + (MFin[1].abs2()*kz2_).sum() );
+        diss_MU = box_length(2)*(-nu_/(NZ_*NZ_))*((MFin[2].abs2()*kz2_).sum() + (MFin[3].abs2()*kz2_).sum());
         
         ///////////////////////////////////////
         //////         OUTPUT            //////
@@ -1410,7 +1448,9 @@ void MHD_FullUBQlin::Calc_Energy_AM_Diss(TimeVariables& tv, double t, const dcmp
     }
     
     // Save the data
-    tv.Save_Data();
+    tv.Save_Data(t);
+    
+    tv.finish_timing();
     
 }
 
@@ -1483,6 +1523,22 @@ void MHD_FullUBQlin::print_noise_range_(){
     
 }
 //////////////////////////////////////////////////////
+
+
+//////////////////////////
+// CFL number
+double MHD_FullUBQlin::Calculate_CFL(const dcmplxVec *MFin,const dcmplxMat* Ckl)  {
+    // Returns CFL/dt to calculate dt - in this case CFL/dt = kmax By + q
+    
+    // Mean fields have been previously calculated, so may as well use them
+    double Bxmax = sqrt(Bx_.array().abs2().maxCoeff());
+    double Bymax = sqrt(By_.array().abs2().maxCoeff());
+    double Uxmax = sqrt(Ux_.array().abs2().maxCoeff());
+    double Uymax = sqrt(Uy_.array().abs2().maxCoeff());
+    // CFL
+    return kmax*(Bymax + Bxmax + Uxmax + Uymax) + q_;
+}
+
 
 
 ///////////////////////////////////////////////////////////

@@ -1,5 +1,5 @@
 // Automatically generated temporary variables - class definition
-dcmplxVecM T2Tdz, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzTiLap2Tkxb, TdzTqPLUSTm2Tdz, TiLap2Tky, TmdzTiLap2Tkxb, TmdzTq, TmiLap2Tky;
+dcmplxVecM T2Tdz, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TB0zTdz, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzTiLap2Tkxb, TdzTqPLUSTm2Tdz, TiLap2Tky, TmdzTiLap2Tkxb, TmdzTq, TmiLap2Tky;
 
 dcmplx Tky, Tm2TkxbTkyTq, Tmkxb;
 
@@ -17,6 +17,7 @@ T2Tdz = dcmplxVecM(NZ_);
 T2TdzTiLap2TkxbP2Tky = dcmplxVecM(NZ_);
 T2TdzTiLap2Tky = dcmplxVecM(NZ_);
 T2TiLap2TkxbTkyP2 = dcmplxVecM(NZ_);
+TB0zTdz = dcmplxVecM(NZ_);
 TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2 = dcmplxVecM(NZ_);
 TdzTiLap2Tkxb = dcmplxVecM(NZ_);
 TdzTqPLUSTm2Tdz = dcmplxVecM(NZ_);
@@ -82,6 +83,7 @@ T2Tdz = (2.*kz_.matrix())*fft2Dfac_;
 T2TdzTiLap2TkxbP2Tky = ((2.*(kyctmp_*pow(kxctmp_,2)))*(ilap2tmp_*kz_).matrix())*fft2Dfac_;
 T2TdzTiLap2Tky = ((2.*kyctmp_)*(ilap2tmp_*kz_).matrix())*fft2Dfac_;
 T2TiLap2TkxbTkyP2 = ((2.*(kxctmp_*pow(kyctmp_,2)))*ilap2tmp_.matrix())*fft2Dfac_;
+TB0zTdz = (B0z_*kz_.matrix())*fft2Dfac_;
 TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2 = ((-1.*(kxctmp_*pow(kyctmp_,2)))*ilap2tmp_.matrix() + (ilap2tmp_*kz2_).matrix()*kxctmp_)*fft2Dfac_;
 TdzTiLap2Tkxb = ((ilap2tmp_*kz_).matrix()*kxctmp_)*fft2Dfac_;
 TdzTqPLUSTm2Tdz = (-2.*kz_.matrix() + kz_.matrix()*q_)*fft2Dfac_;
@@ -108,7 +110,7 @@ fft_.back_2DFull( Ctmp_2_ );
 Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
 fft_.for_2DFull( Ctmp_1_ );
 fft_.for_2DFull( Ctmp_2_ );
-Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C21_ + (Tm2TkxbTkyTq/fft2Dfac_)*C11_);
+Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C21_ + (Tm2TkxbTkyTq/fft2Dfac_)*C11_) + (TB0zTdz/fft2Dfac_).asDiagonal()*C31_;
 dealias(Ctmp_2_);
 Ckl_out[i].block( 0, 0, NZ_, NZ_) = Ctmp_2_;
 
@@ -122,7 +124,7 @@ fft_.back_2DFull( Ctmp_2_ );
 Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
 fft_.for_2DFull( Ctmp_1_ );
 fft_.for_2DFull( Ctmp_2_ );
-Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C22_ + (Tm2TkxbTkyTq/fft2Dfac_)*C12_);
+Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C22_ + (Tm2TkxbTkyTq/fft2Dfac_)*C12_) + (TB0zTdz/fft2Dfac_).asDiagonal()*C32_;
 dealias(Ctmp_2_);
 Ckl_out[i].block( 0, NZ_, NZ_, NZ_) = Ctmp_2_;
 
@@ -136,7 +138,7 @@ fft_.back_2DFull( Ctmp_2_ );
 Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
 fft_.for_2DFull( Ctmp_1_ );
 fft_.for_2DFull( Ctmp_2_ );
-Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C23_ + (Tm2TkxbTkyTq/fft2Dfac_)*C13_);
+Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C23_ + (Tm2TkxbTkyTq/fft2Dfac_)*C13_) + (TB0zTdz/fft2Dfac_).asDiagonal()*C33_;
 dealias(Ctmp_2_);
 Ckl_out[i].block( 0, 2*NZ_, NZ_, NZ_) = Ctmp_2_;
 
@@ -150,7 +152,7 @@ fft_.back_2DFull( Ctmp_2_ );
 Ctmp_2_ = dzBy_.asDiagonal()*Ctmp_2_;
 fft_.for_2DFull( Ctmp_1_ );
 fft_.for_2DFull( Ctmp_2_ );
-Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C24_ + (Tm2TkxbTkyTq/fft2Dfac_)*C14_);
+Ctmp_2_ = Ctmp_1_ + ilapFtmp_.matrix().asDiagonal()*(Ctmp_2_ + (T2Tdz/fft2Dfac_).asDiagonal()*C24_ + (Tm2TkxbTkyTq/fft2Dfac_)*C14_) + (TB0zTdz/fft2Dfac_).asDiagonal()*C34_;
 dealias(Ctmp_2_);
 Ckl_out[i].block( 0, 3*NZ_, NZ_, NZ_) = Ctmp_2_;
 
@@ -167,7 +169,7 @@ fft_.back_2DFull( Ctmp_3_ );
 Ctmp_3_ = dzBy_.asDiagonal()*Ctmp_3_;
 Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
 fft_.for_2DFull( Ctmp_1_ );
-Ctmp_3_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C11_;
+Ctmp_3_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C41_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C11_;
 dealias(Ctmp_3_);
 Ckl_out[i].block( NZ_, 0, NZ_, NZ_) = Ctmp_3_;
 
@@ -184,7 +186,7 @@ fft_.back_2DFull( Ctmp_3_ );
 Ctmp_3_ = dzBy_.asDiagonal()*Ctmp_3_;
 Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
 fft_.for_2DFull( Ctmp_1_ );
-Ctmp_3_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C12_;
+Ctmp_3_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C42_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C12_;
 dealias(Ctmp_3_);
 Ckl_out[i].block( NZ_, NZ_, NZ_, NZ_) = Ctmp_3_;
 
@@ -201,7 +203,7 @@ fft_.back_2DFull( Ctmp_3_ );
 Ctmp_3_ = dzBy_.asDiagonal()*Ctmp_3_;
 Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
 fft_.for_2DFull( Ctmp_1_ );
-Ctmp_3_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C13_;
+Ctmp_3_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C43_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C13_;
 dealias(Ctmp_3_);
 Ckl_out[i].block( NZ_, 2*NZ_, NZ_, NZ_) = Ctmp_3_;
 
@@ -218,7 +220,7 @@ fft_.back_2DFull( Ctmp_3_ );
 Ctmp_3_ = dzBy_.asDiagonal()*Ctmp_3_;
 Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
 fft_.for_2DFull( Ctmp_1_ );
-Ctmp_3_ = Ctmp_1_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C14_;
+Ctmp_3_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C44_ + (TdzTqPLUSTm2Tdz/fft2Dfac_).asDiagonal()*C14_;
 dealias(Ctmp_3_);
 Ckl_out[i].block( NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_3_;
 
@@ -228,6 +230,7 @@ Ctmp_1_ = Tky*C11_;
 fft_.back_2DFull( Ctmp_1_ );
 Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
 fft_.for_2DFull( Ctmp_1_ );
+Ctmp_1_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C11_;
 dealias(Ctmp_1_);
 Ckl_out[i].block( 2*NZ_, 0, NZ_, NZ_) = Ctmp_1_;
 
@@ -237,6 +240,7 @@ Ctmp_1_ = Tky*C12_;
 fft_.back_2DFull( Ctmp_1_ );
 Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
 fft_.for_2DFull( Ctmp_1_ );
+Ctmp_1_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C12_;
 dealias(Ctmp_1_);
 Ckl_out[i].block( 2*NZ_, NZ_, NZ_, NZ_) = Ctmp_1_;
 
@@ -246,6 +250,7 @@ Ctmp_1_ = Tky*C13_;
 fft_.back_2DFull( Ctmp_1_ );
 Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
 fft_.for_2DFull( Ctmp_1_ );
+Ctmp_1_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C13_;
 dealias(Ctmp_1_);
 Ckl_out[i].block( 2*NZ_, 2*NZ_, NZ_, NZ_) = Ctmp_1_;
 
@@ -255,6 +260,7 @@ Ctmp_1_ = Tky*C14_;
 fft_.back_2DFull( Ctmp_1_ );
 Ctmp_1_ = By_.asDiagonal()*Ctmp_1_;
 fft_.for_2DFull( Ctmp_1_ );
+Ctmp_1_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C14_;
 dealias(Ctmp_1_);
 Ckl_out[i].block( 2*NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_1_;
 
@@ -271,7 +277,7 @@ fft_.back_2DFull( Ctmp_3_ );
 Ctmp_3_ = dzdzBy_.asDiagonal()*Ctmp_3_;
 Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
 fft_.for_2DFull( Ctmp_1_ );
-Ctmp_3_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C31_;
+Ctmp_3_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C21_ + (TmdzTq/fft2Dfac_).asDiagonal()*C31_;
 dealias(Ctmp_3_);
 Ckl_out[i].block( 3*NZ_, 0, NZ_, NZ_) = Ctmp_3_;
 
@@ -288,7 +294,7 @@ fft_.back_2DFull( Ctmp_3_ );
 Ctmp_3_ = dzdzBy_.asDiagonal()*Ctmp_3_;
 Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
 fft_.for_2DFull( Ctmp_1_ );
-Ctmp_3_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C32_;
+Ctmp_3_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C22_ + (TmdzTq/fft2Dfac_).asDiagonal()*C32_;
 dealias(Ctmp_3_);
 Ckl_out[i].block( 3*NZ_, NZ_, NZ_, NZ_) = Ctmp_3_;
 
@@ -305,7 +311,7 @@ fft_.back_2DFull( Ctmp_3_ );
 Ctmp_3_ = dzdzBy_.asDiagonal()*Ctmp_3_;
 Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
 fft_.for_2DFull( Ctmp_1_ );
-Ctmp_3_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C33_;
+Ctmp_3_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C23_ + (TmdzTq/fft2Dfac_).asDiagonal()*C33_;
 dealias(Ctmp_3_);
 Ckl_out[i].block( 3*NZ_, 2*NZ_, NZ_, NZ_) = Ctmp_3_;
 
@@ -322,7 +328,7 @@ fft_.back_2DFull( Ctmp_3_ );
 Ctmp_3_ = dzdzBy_.asDiagonal()*Ctmp_3_;
 Ctmp_1_ = Ctmp_1_ + Ctmp_2_ + Ctmp_3_;
 fft_.for_2DFull( Ctmp_1_ );
-Ctmp_3_ = Ctmp_1_ + (TmdzTq/fft2Dfac_).asDiagonal()*C34_;
+Ctmp_3_ = Ctmp_1_ + (TB0zTdz/fft2Dfac_).asDiagonal()*C24_ + (TmdzTq/fft2Dfac_).asDiagonal()*C34_;
 dealias(Ctmp_3_);
 Ckl_out[i].block( 3*NZ_, 3*NZ_, NZ_, NZ_) = Ctmp_3_;
 ///     AUTOMATICALLY GENERATED EQUATIONS - END       ///

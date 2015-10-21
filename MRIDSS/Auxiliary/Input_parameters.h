@@ -35,7 +35,8 @@ public:
     double L[3];
     
     // Time domain
-    double dt;
+    double dt; // Negative for variable time-step 
+    double CFL; // CFL number, might be ignored (for a fixed step integrator)
     double t_final; // Final time
     double t_initial; // Initial time
     double t_start; // Start time (different when loading from file)
@@ -45,15 +46,20 @@ public:
     double timvar_save_interval;   // Interval for saving energy, AM etc.
     double fullsol_save_interval;   // Interval for saving full solution
     
+    // Mean magnetic fields
+    double B0z;
     // Dissipation
     double nu;   // Viscosity
     double eta;   // Resisitivity - could ignore for hydrodynamic
     // Shear
     double q;  // Shear rate
+    double omega; // Rotation
     // Noise
     double f_noise;  // Driving noise (un-normalized)
     double noise_range_low; // Low driving noise cutoff (default 0)
     double noise_range_high; // High driving noise cutoff (default inf)
+    double v_noise_mult, b_noise_mult; // Multiply individual noise values by these amounts
+    
     // Shearing box
     bool remapQ;   // Whether to remap or not
     // Include quasi-linear feedback
@@ -87,6 +93,9 @@ public:
     // SB parameters
     double TSB; // Time before remap = LY/LX/q
     int num_before_remap;  // Number of steps before remap
+    // Times to use in saving
+    double fullsave_t;
+    double timevar_t;
     
     // Directory for data storage
     std::string simulation_dir;

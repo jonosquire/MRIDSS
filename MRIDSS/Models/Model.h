@@ -50,6 +50,7 @@ public:
     virtual int Cdimz() const = 0;  // In z (size of eigen matrix)
     virtual int MFdimz() const = 0;  // Size of MF vectors in z
     virtual int num_MFs() const = 0;  // Number of mean fields
+    virtual int num_linFs() const = 0;  // Number of mean fields
     // Box size
     virtual double box_length(int index) const =0; // Size of box
     
@@ -62,7 +63,7 @@ public:
     dcmplx* ky_pointer() const {return ky_;};
     
     // Remapping procedure
-    friend void ShearingBox_Remap(Model* model,dcmplxMat* Ckl);
+    friend void ShearingBox_Remap(double qt,Model* model,dcmplxMat* Ckl);
     friend void ShearingBox_Continuous_Remap(double qt, Model* mod, dcmplxMat* Ckl);
 
     // Quasi-linear state
@@ -75,6 +76,11 @@ public:
     // Number of Reynolds stress saves
     virtual int num_Reynolds_saves() = 0;
     //////////////////////////////////////////////////////////////////
+    
+    ///////////////////////////////////////////////////
+    // CFL condition - returns CFL number (e.g., kmax*By+q)
+    virtual double Calculate_CFL(const dcmplxVec *MFin,const dcmplxMat* Ckl) = 0;
+    ///////////////////////////////////////////////////
 
 protected:
     

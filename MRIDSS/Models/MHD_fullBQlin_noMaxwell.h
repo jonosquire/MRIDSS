@@ -1,13 +1,13 @@
 //
-//  Model_AutoGen_template.h
+//  MHD_fullBQlin_noMaxwell.h
 //  MRIDSS
 //
 //  Created by Jonathan Squire on 4/25/14.
 //  Copyright (c) 2014 J Squire. All rights reserved.
 //
 
-#ifndef __MRIDSS__Model_AutoGen_template__
-#define __MRIDSS__Model_AutoGen_template__
+#ifndef __MRIDSS__MHD_fullBQlin_noMaxwell__
+#define __MRIDSS__MHD_fullBQlin_noMaxwell__
 
 
 #include "Model.h"
@@ -25,10 +25,10 @@
 // Model class for S3T/CE2 shearing box MHD model
 // Basic Quasi-linear MHD
 // Derived from Model (model.h)
-class Model_AutoGen_template : public Model {
+class MHD_fullBQlin_noMaxwell : public Model {
 public:
-    Model_AutoGen_template(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
-    ~Model_AutoGen_template();
+    MHD_fullBQlin_noMaxwell(const Inputs& sp, MPIdata& mpi, fftwPlans& fft) ;
+    ~MHD_fullBQlin_noMaxwell();
     
     // Model name - for comparison wiht input file as a check
     const std::string equations_name;
@@ -55,6 +55,7 @@ public:
     // Box dimensions
     double box_length(int index) const { return L_[index];};
     
+    
     // Quasi-linear state
     void set_QL_YN(bool QL){QL_YN_ = QL;};
     
@@ -66,7 +67,7 @@ public:
     //  AUXILIARY FUNCTIONS
     //  Calculate energy, angular momentum and dissipation
     void Calc_Energy_AM_Diss(TimeVariables& tv, double t,const dcmplxVec *MFin, const dcmplxMat *Cin );
-    int num_Reynolds_saves(){return 5;}; //Change if Calc_Energy_AM_Diss is modified!
+    int num_Reynolds_saves(){return MFdimz()*num_MFs();}; //Change if Calc_Energy_AM_Diss is modified!
     
     //////////////////////////
     // CFL number
@@ -113,10 +114,16 @@ private:
     
     // turn off driving of ky=0, kx,kz != 0 modes (i.e., non-shearing waves)
     bool dont_drive_ky0_modes_Q_;
+    bool drive_only_velocity_fluctuations_;
+
     // Noise properties
     double noise_range_[2]; // High/low cutoff
     Eigen::Array<bool,Eigen::Dynamic,1> drive_condition_; // Store driving in z as you loop  though x,y
     void print_noise_range_();
+    
+    // Turn off rotation effects
+    bool with_rotation_effects_; // Set to 0 to turn off rotation
+
    
     
     ////////////////////////////////////////////////////
@@ -156,25 +163,17 @@ private:
     //  AUTO GENERATED VARIABLES
     
     // Automatically generated temporary variables - class definition
-    dcmplxVecM T2Tdz, T2TdzTiLap2TkxbP2Tky, T2TdzTiLap2Tky, T2TiLap2TkxbTkyP2, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzP2TkxbPLUSTkxbP3, TdzTiLap2Tkxb, TdzTiLap2TkxbP3PLUSTdzTkxb, TdzTqPLUSTm2Tdz, TiLap2TkxbP2Tky, TiLap2Tky, TkxbPLUSTm2TdzP2TiLap2Tkxb, Tm2TdzTiLap2Tky, TmdzTiLap2Tkxb, TmdzTq, TmiLap2TkxbP2Tky, TmiLap2Tky;
+    dcmplxVecM T2Tdz, T2TdzTiLap2Tky, TdzP2TiLap2TkxbPLUSTmiLap2TkxbTkyP2, TdzTiLap2Tkxb, TdzTqPLUSTm2Tdz, TiLap2Tky, TmdzTq, TmiLap2TkxbP2Tky;
     
-    dcmplx Tkxb, TkxbTkyP2, Tky, Tm2TkxbTkyTq, Tmkxb, Tmky;
+    dcmplx Tkxb, Tky, Tm2TkxbTkyTq;
     
-    dcmplxMat Ctmp_1_, Ctmp_2_, Ctmp_3_, Ctmp_4_, Ctmp_5_, Ctmp_6_;
+    dcmplxMat Ctmp_1_, Ctmp_2_, Ctmp_3_, Ctmp_4_, Ctmp_5_, Ctmp_0_;
     
     dcmplxMat C11_, C12_, C13_, C14_, C21_, C22_, C23_, C24_, C31_, C32_, C33_, C34_, C41_, C42_, C43_, C44_;
-
     
     
     
     /////////////////////////////////////////////////
-    
-    
-    ////////////////////////////////////////////////////////////
-    //      OPERATOR WTIH B=0 -  FOR SPEED WHEN POSSIBLE     //
-    
-    // Evolves C in zero mean field - much faster when possible!
-    void Coperator_with_zero_mean_fields(int row, dcmplxMat& C1i, dcmplxMat& C2i, dcmplxMat& C3i, dcmplxMat& C4i, dcmplxMat& Cklout);
 
 };
 

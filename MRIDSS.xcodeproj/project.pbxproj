@@ -13,8 +13,12 @@
 		A241D8B619AE6AD500E901AB /* Constant_Damping.cc in Sources */ = {isa = PBXBuildFile; fileRef = A241D8B419AE6AD500E901AB /* Constant_Damping.cc */; };
 		A254623A191A60B300920C0A /* Input_parameters.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2546238191A60B300920C0A /* Input_parameters.cc */; };
 		A2546240191AD01B00920C0A /* MPIdata.cc in Sources */ = {isa = PBXBuildFile; fileRef = A254623E191AD01B00920C0A /* MPIdata.cc */; };
+		A2A5CA231A377FB800E5B47F /* InterfaceOutput.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2A5CA211A377FB800E5B47F /* InterfaceOutput.cc */; };
+		A2A5CA291A37A3BB00E5B47F /* intRK3CN.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2A5CA271A37A3BB00E5B47F /* intRK3CN.cc */; };
+		A2A67A611BD0460F009F6C05 /* HD_fullU.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2A67A5F1BD0460F009F6C05 /* HD_fullU.cc */; settings = {ASSET_TAGS = (); }; };
 		A2ADBADE19169F860082125D /* intEulerCN.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2ADBADC19169F860082125D /* intEulerCN.cc */; };
 		A2ADBAE11917D7370082125D /* General_Auxiliary.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2ADBADF1917D7370082125D /* General_Auxiliary.cc */; };
+		A2B3557D1A69E2EA00AAD4FA /* MHD_fullBQlin_noMaxwell.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2B3557B1A69E2EA00AAD4FA /* MHD_fullBQlin_noMaxwell.cc */; };
 		A2BA0FA11912A96C00866A27 /* main.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2BA0FA01912A96C00866A27 /* main.cc */; };
 		A2BA0FA31912A96C00866A27 /* MRIDSS.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = A2BA0FA21912A96C00866A27 /* MRIDSS.1 */; };
 		A2BA0FB11912B14900866A27 /* intEuler.cc in Sources */ = {isa = PBXBuildFile; fileRef = A2BA0FAB1912B14900866A27 /* intEuler.cc */; };
@@ -55,7 +59,6 @@
 		A2618DD0197EB8D9001EC9FD /* MMA_Generated_ReynoldsStresses.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_ReynoldsStresses.cpp; sourceTree = "<group>"; };
 		A27AE91A19803C220035E478 /* CopyFilesToCluster.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = CopyFilesToCluster.sh; sourceTree = "<group>"; };
 		A27AE91B19803C220035E478 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
-		A29B7F9A19D61177005C5E09 /* SW_test.DSSinput */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SW_test.DSSinput; sourceTree = "<group>"; };
 		A2A3A6E719756550000C1024 /* Model_AutoGen_template.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Model_AutoGen_template.cc; sourceTree = "<group>"; };
 		A2A3A6E819756550000C1024 /* Model_AutoGen_template.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Model_AutoGen_template.h; sourceTree = "<group>"; };
 		A2A3A6EB19756565000C1024 /* GenerateC++Equations.nb */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "GenerateC++Equations.nb"; sourceTree = "<group>"; };
@@ -64,10 +67,20 @@
 		A2A3A6F019756565000C1024 /* ReadCklData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ReadCklData.m; sourceTree = "<group>"; };
 		A2A3A6F119756565000C1024 /* WriteMRIDSSinput.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WriteMRIDSSinput.m; sourceTree = "<group>"; };
 		A2A3A6F719762869000C1024 /* MMA_Generated_Equations_BQlin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_Equations_BQlin.cpp; sourceTree = "<group>"; };
+		A2A5CA211A377FB800E5B47F /* InterfaceOutput.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InterfaceOutput.cc; sourceTree = "<group>"; };
+		A2A5CA221A377FB800E5B47F /* InterfaceOutput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InterfaceOutput.h; sourceTree = "<group>"; };
+		A2A5CA271A37A3BB00E5B47F /* intRK3CN.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = intRK3CN.cc; sourceTree = "<group>"; };
+		A2A5CA281A37A3BB00E5B47F /* intRK3CN.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = intRK3CN.h; sourceTree = "<group>"; };
+		A2A67A5F1BD0460F009F6C05 /* HD_fullU.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HD_fullU.cc; sourceTree = "<group>"; };
+		A2A67A601BD0460F009F6C05 /* HD_fullU.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HD_fullU.h; sourceTree = "<group>"; };
+		A2A67A621BD0472A009F6C05 /* MMA_Generated_Equations_fullHD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MMA_Generated_Equations_fullHD.cpp; sourceTree = "<group>"; };
+		A2A67A651BD05F74009F6C05 /* SW_test.DSSinput */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SW_test.DSSinput; sourceTree = "<group>"; };
 		A2ADBADC19169F860082125D /* intEulerCN.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = intEulerCN.cc; sourceTree = "<group>"; };
 		A2ADBADD19169F860082125D /* intEulerCN.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = intEulerCN.h; sourceTree = "<group>"; };
 		A2ADBADF1917D7370082125D /* General_Auxiliary.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = General_Auxiliary.cc; sourceTree = "<group>"; };
 		A2ADBAE01917D7370082125D /* General_Auxiliary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = General_Auxiliary.h; sourceTree = "<group>"; };
+		A2B3557B1A69E2EA00AAD4FA /* MHD_fullBQlin_noMaxwell.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MHD_fullBQlin_noMaxwell.cc; sourceTree = "<group>"; };
+		A2B3557C1A69E2EA00AAD4FA /* MHD_fullBQlin_noMaxwell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MHD_fullBQlin_noMaxwell.h; sourceTree = "<group>"; };
 		A2BA0F9D1912A96C00866A27 /* MRIDSS */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MRIDSS; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2BA0FA01912A96C00866A27 /* main.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cc; sourceTree = "<group>"; };
 		A2BA0FA21912A96C00866A27 /* MRIDSS.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = MRIDSS.1; sourceTree = "<group>"; };
@@ -106,6 +119,7 @@
 			children = (
 				A2618DD0197EB8D9001EC9FD /* MMA_Generated_ReynoldsStresses.cpp */,
 				A2EDFCB7197F24280028A1A3 /* MMA_Generated_Equations_FullUBQlin.cpp */,
+				A2A67A621BD0472A009F6C05 /* MMA_Generated_Equations_fullHD.cpp */,
 				A2A3A6F719762869000C1024 /* MMA_Generated_Equations_BQlin.cpp */,
 				A2EDFCAB1978603B0028A1A3 /* MMA_Generated_Equations_fullBQlin.cpp */,
 				A2A3A6EB19756565000C1024 /* GenerateC++Equations.nb */,
@@ -150,7 +164,7 @@
 		A2BA0F9F1912A96C00866A27 /* MRIDSS */ = {
 			isa = PBXGroup;
 			children = (
-				A29B7F9A19D61177005C5E09 /* SW_test.DSSinput */,
+				A2A67A651BD05F74009F6C05 /* SW_test.DSSinput */,
 				A2BA0FA01912A96C00866A27 /* main.cc */,
 				A25462371919B5E900920C0A /* General_Definitions.h */,
 				A2BA0FBE1912F41B00866A27 /* Auxiliary */,
@@ -164,6 +178,8 @@
 		A2BA0FA91912B14900866A27 /* Integrators */ = {
 			isa = PBXGroup;
 			children = (
+				A2A5CA271A37A3BB00E5B47F /* intRK3CN.cc */,
+				A2A5CA281A37A3BB00E5B47F /* intRK3CN.h */,
 				A2BA0FAA1912B14900866A27 /* Integrator.h */,
 				A2BA0FAB1912B14900866A27 /* intEuler.cc */,
 				A2BA0FAC1912B14900866A27 /* intEuler.h */,
@@ -184,6 +200,10 @@
 				A2EDFCB9197F571F0028A1A3 /* MHD_FullUBQlin.h */,
 				A2EDFCB0197F054E0028A1A3 /* MHD_fullBQlin.cc */,
 				A2EDFCB1197F054E0028A1A3 /* MHD_fullBQlin.h */,
+				A2B3557B1A69E2EA00AAD4FA /* MHD_fullBQlin_noMaxwell.cc */,
+				A2B3557C1A69E2EA00AAD4FA /* MHD_fullBQlin_noMaxwell.h */,
+				A2A67A5F1BD0460F009F6C05 /* HD_fullU.cc */,
+				A2A67A601BD0460F009F6C05 /* HD_fullU.h */,
 				A2A3A6E719756550000C1024 /* Model_AutoGen_template.cc */,
 				A2A3A6E819756550000C1024 /* Model_AutoGen_template.h */,
 				A2EDFCAD197EE3A10028A1A3 /* MHD_BQlin.cc */,
@@ -196,6 +216,8 @@
 		A2BA0FBE1912F41B00866A27 /* Auxiliary */ = {
 			isa = PBXGroup;
 			children = (
+				A2A5CA211A377FB800E5B47F /* InterfaceOutput.cc */,
+				A2A5CA221A377FB800E5B47F /* InterfaceOutput.h */,
 				A2BA0FC21912F44800866A27 /* Initialization_routines.cc */,
 				A2BA0FC31912F44800866A27 /* Initialization_routines.h */,
 				A2546238191A60B300920C0A /* Input_parameters.cc */,
@@ -274,12 +296,16 @@
 			files = (
 				A20A82B9193FE9BA00E2DF42 /* intRK2CN.cc in Sources */,
 				A2BA0FA11912A96C00866A27 /* main.cc in Sources */,
+				A2A5CA231A377FB800E5B47F /* InterfaceOutput.cc in Sources */,
 				A241D8B619AE6AD500E901AB /* Constant_Damping.cc in Sources */,
 				A2EDFCB2197F054E0028A1A3 /* MHD_fullBQlin.cc in Sources */,
 				A2ADBADE19169F860082125D /* intEulerCN.cc in Sources */,
+				A2A67A611BD0460F009F6C05 /* HD_fullU.cc in Sources */,
 				A20239BE195B262400275CD9 /* TimeVariables.cc in Sources */,
 				A2EDFCBA197F571F0028A1A3 /* MHD_FullUBQlin.cc in Sources */,
+				A2B3557D1A69E2EA00AAD4FA /* MHD_fullBQlin_noMaxwell.cc in Sources */,
 				A2546240191AD01B00920C0A /* MPIdata.cc in Sources */,
+				A2A5CA291A37A3BB00E5B47F /* intRK3CN.cc in Sources */,
 				A2BA0FB11912B14900866A27 /* intEuler.cc in Sources */,
 				A20239BB195B257A00275CD9 /* fftwPlans.cc in Sources */,
 				A2ADBAE11917D7370082125D /* General_Auxiliary.cc in Sources */,

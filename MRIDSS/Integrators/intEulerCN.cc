@@ -8,11 +8,17 @@
 
 #include "intEulerCN.h"
 
-EulerCN::EulerCN(double t0, double dt, Model &model) :
+EulerCN::EulerCN(double t0, Inputs& SP, Model &model) :
 dim_Ckl_array_(model.Cdimxy()), size_Ckl_(model.Cdimz()),
 num_MF_(model.num_MFs()), size_MF_(model.MFdimz()),
-dt_(dt),  model_(model)
+model_(model),
+step_count_(0), dt_mean_(0.0)
 {
+    if (SP.dt<0)
+        std::cout << "Variable time-step not supported by EulerCN integrator!"<< std::endl;
+    dt_ = fabs(SP.dt); // This integrator requires a time-step to be specified in inputs!!
+    variable_dt_ = 0;
+    
     // Assigning necessary temporary space
     MF_new_ =new dcmplxVec[num_MF_];
     for (int i=0; i<num_MF_; i++)
@@ -77,7 +83,12 @@ void EulerCN::Reinitialize_linear_Ops(double t){
 }
 
 
-int EulerCN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
+double EulerCN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
+    
+    
+    dt_mean_ += dt_;
+    ++step_count_;
+    
     
     model_.rhs(t, dt_, MF, Ckl, MF_new_, Ckl_new_,linop_Ckl_);
     
@@ -116,7 +127,7 @@ int EulerCN::Step(double t, dcmplxVec* MF, dcmplxMat * Ckl) {
         linop_Ckl_old_[i] = linop_Ckl_[i];
                        
                        
-    return 0;
+    return dt_;
 }
 
 

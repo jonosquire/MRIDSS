@@ -48,6 +48,7 @@ public:
     int Cdimz() const { return nz_Cfull_; };// z matrix dimension
     int MFdimz() const { return NZ_; };  // Size of MF vectors in z
     int num_MFs() const { return num_MF_; };  // Number of mean fields
+    int num_linFs() const { return num_fluct_;}; // Number of fluctuating fields
     // MPI related
     int Cdimxy() const { return mpi_.nxy(); };// x y dimension
     int index_for_k_array() const { return mpi_.minxy_i(); }; // Index for each processor in k_ arrays
